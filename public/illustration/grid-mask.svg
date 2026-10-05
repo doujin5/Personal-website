@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1440" height="670.24" viewBox="0 0 1440 670.24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect id="Grid top fade" width="1440" height="670.24" fill="url(#paint0_linear_0_622)"/>
+<defs>
+<linearGradient id="paint0_linear_0_622" x1="720" y1="0" x2="720" y2="670.24" gradientUnits="userSpaceOnUse">
+<stop stop-opacity="0"/>
+<stop offset="0.12" stop-opacity="0.15"/>
+<stop offset="0.42"/>
+<stop offset="1"/>
+</linearGradient>
+</defs>
+</svg>

@@ -1,26 +1,335 @@
 @import "tailwindcss";
 
+/* Design tokens from Figma ("Making aurora", Apsara --rs-* variables). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --rs-color-background-base-primary: #fcfcfc;
+  --rs-color-foreground-base-primary: #202020;
+  --rs-color-foreground-base-secondary: #646464;
+  --rs-color-border-base-primary: #e8e8e8;
+  --link-decoration: #838383;
+  --rs-color-background-base-primary-hover: #f0f0f0;
+  --rs-color-background-base-secondary: #f9f9f9;
+  --tick: #bbbbbb;
+  /* Not in the Figma file: "Copied" confirmation (4.68:1 on the tooltip). */
+  --sage: #5a7a5c;
+  /* Not in the Figma file: hover fill for rows and icon buttons. */
+  --hover: #f3f3f3;
+  color-scheme: light;
+}
+
+/* Dark theme: derived from the light tokens until the Figma dark design is
+   in. Follows the system setting unless the theme toggle has set
+   data-theme on <html>. The two blocks must stay identical. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rs-color-background-base-primary: #121212;
+    --rs-color-foreground-base-primary: #ededed;
+    --rs-color-foreground-base-secondary: #a0a0a0;
+    --rs-color-border-base-primary: #2a2a2a;
+    --link-decoration: #707070;
+    --rs-color-background-base-primary-hover: #222222;
+    --rs-color-background-base-secondary: #181818;
+    --tick: #4a4a4a;
+    --sage: #8fb592;
+    --hover: #1c1c1c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --rs-color-background-base-primary: #121212;
+  --rs-color-foreground-base-primary: #ededed;
+  --rs-color-foreground-base-secondary: #a0a0a0;
+  --rs-color-border-base-primary: #2a2a2a;
+  --link-decoration: #707070;
+  --rs-color-background-base-primary-hover: #222222;
+  --rs-color-background-base-secondary: #181818;
+  --tick: #4a4a4a;
+  --sage: #8fb592;
+  --hover: #1c1c1c;
+  color-scheme: dark;
+}
+
+/* ThemeToggle shows one icon (monitor, sun, moon) and tooltip label per mode. */
+:root[data-theme] :is(.theme-icon-system, .theme-label-system),
+:root:not([data-theme="light"]) :is(.theme-icon-light, .theme-label-light),
+:root:not([data-theme="dark"]) :is(.theme-icon-dark, .theme-label-dark) {
+  display: none;
+}
+
+/* ThemeToggle motion: a squish on press, a per-icon nudge on hover, and a
+   per-icon entrance when switching (an animation restarts whenever its
+   element goes from display:none to shown). */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-toggle {
+    transition:
+      background-color 150ms,
+      scale 120ms ease-out;
+  }
+  .theme-toggle:active {
+    scale: 0.88;
+  }
+  .theme-toggle img {
+    transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .theme-toggle:hover .theme-icon-system img {
+    transform: scale(1.12);
+  }
+  .theme-toggle:hover .theme-icon-light img {
+    transform: rotate(45deg);
+  }
+  .theme-toggle:hover .theme-icon-dark img {
+    transform: rotate(-15deg);
+  }
+  .theme-toggle[data-animate] .theme-icon-system {
+    animation: theme-system-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .theme-toggle[data-animate] .theme-icon-light {
+    animation: theme-sun-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .theme-toggle[data-animate] .theme-icon-dark {
+    animation: theme-moon-in 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+@keyframes theme-system-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.6);
+  }
+}
+@keyframes theme-sun-in {
+  from {
+    opacity: 0;
+    transform: rotate(-120deg) scale(0.4);
+  }
+}
+@keyframes theme-moon-in {
+  from {
+    opacity: 0;
+    transform: translate(4px, -4px) rotate(70deg) scale(0.5);
+  }
+}
+
+/* `dark:` matches the same conditions as the dark tokens above. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"] *) {
+    @slot;
+  }
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-canvas: var(--rs-color-background-base-primary);
+  --color-fg: var(--rs-color-foreground-base-primary);
+  --color-fg-muted: var(--rs-color-foreground-base-secondary);
+  --color-line: var(--rs-color-border-base-primary);
+  --color-link-decoration: var(--link-decoration);
+  --color-hover: var(--hover);
+  --color-sage: var(--sage);
+  --color-canvas-hover: var(--rs-color-background-base-primary-hover);
+  --color-canvas-secondary: var(--rs-color-background-base-secondary);
+  --color-tick: var(--tick);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-departure-mono);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Softer take on Figma's "Shadows/Lifted": a tight contact shadow plus
+     wider, fainter layers with negative spread so it diffuses naturally. */
+  --shadow-lifted:
+    0 1px 2px rgb(0 0 0 / 0.04), 0 4px 8px -2px rgb(0 0 0 / 0.06),
+    0 12px 24px -6px rgb(0 0 0 / 0.08);
+
+  /* Page load: fixed chrome (back button, ruler) fades in; text lines use
+     .line-in below. */
+  --animate-fade-in: fade-in 600ms ease-out backwards;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  --animate-float: float 4s ease-in-out infinite;
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-fg);
+}
+
+/* The illustration is a fixed 1440×550 Figma canvas, scaled down on narrow
+   screens. At full size it tucks 151px under the bottom of the timeline, as in
+   Figma; scaled down, the column covers more of the canvas, so it tucks in
+   less to keep the cube stack (top at 113px) clear. */
+.illustration {
+  --s: 0.38;
+  --tuck: 100px;
+  margin-top: calc(var(--tuck) * var(--s) * -1);
+}
+@media (width >= 480px) {
+  .illustration {
+    --s: 0.48;
+  }
+}
+@media (width >= 640px) {
+  .illustration {
+    --s: 0.6;
+  }
+}
+@media (width >= 768px) {
+  .illustration {
+    --s: 0.72;
+  }
+}
+@media (width >= 1024px) {
+  .illustration {
+    --s: 0.92;
+  }
+}
+@media (width >= 1152px) {
+  .illustration {
+    --s: 1;
+    --tuck: 151px;
+  }
+}
+
+/* Word morph used by MorphText: new words fade in while drifting up a
+   little from below (staying on the text line); old words fade out drifting
+   up. The fade is the main effect, the drift just gives it direction. */
+@media (prefers-reduced-motion: no-preference) {
+  .morph-in {
+    animation: morph-in 420ms ease-out both;
+  }
+  .morph-out {
+    animation: morph-out 180ms ease-in both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .morph-out {
+    display: none;
+  }
+}
+@keyframes morph-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(35%);
+  }
+}
+@keyframes morph-out {
+  to {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(-35%);
+  }
+}
+
+/* Line-by-line reveal (LineReveal.tsx). Lines stay hidden while
+   `reveal-pending` is set until they are shown, then rise and sharpen in. */
+.reveal-pending [data-reveal-root] :is(h1, h2, h3, p, li, header, figure, [data-reveal]):not(dialog *):not([data-shown]) {
+  opacity: 0;
+}
+.line-in {
+  animation: line-in 800ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+}
+
+/* Page wipe between the home page and posts (TransitionLink.tsx), after
+   zero.university/founder-letters: the old page holds still while the new one
+   is uncovered through a soft gradient edge — bottom-up when opening a post,
+   top-down when going back. The mask is three viewports tall (hidden, a soft
+   ramp, shown) and slides past the snapshot. */
+html[data-vt]::view-transition-old(root) {
+  animation: none;
+}
+html[data-vt]::view-transition-new(root) {
+  /* Based on zero.university's ~300ms sweep, eased a little longer and softer:
+     ~550ms of visible sweep with a soft edge about 75% of the screen tall. */
+  animation: vt-wipe 680ms cubic-bezier(0.37, 0, 0.25, 1) both;
+  mask-size: 100% 300%;
+  mask-repeat: no-repeat;
+}
+html[data-vt="open"]::view-transition-new(root) {
+  mask-image: linear-gradient(to bottom, transparent 37.5%, #000 62.5%);
+}
+html[data-vt="close"]::view-transition-new(root) {
+  mask-image: linear-gradient(to top, transparent 37.5%, #000 62.5%);
+  animation-direction: reverse;
+}
+@keyframes vt-wipe {
+  from {
+    mask-position: 0 0%;
+  }
+  to {
+    mask-position: 0 100%;
+  }
+}
+::view-transition {
+  pointer-events: none;
+}
+
+/* Team marks idle loop (case study): the marks bob with a slight tilt, and
+   their eyes (TeamMark.tsx) glance to one side and back and blink, each on
+   its own rhythm. */
+@media (prefers-reduced-motion: no-preference) {
+  .team-bob {
+    animation: team-bob 3.6s ease-in-out infinite;
+  }
+  .eyes-look {
+    animation: eyes-look 5s ease-in-out infinite;
+  }
+  .eye-blink {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: eye-blink 4s ease-in-out infinite;
+  }
+}
+@keyframes team-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(var(--tilt, 0deg));
+  }
+}
+@keyframes eyes-look {
+  0%,
+  30%,
+  100% {
+    translate: 0 0;
+  }
+  40%,
+  62% {
+    translate: var(--look);
+  }
+  72% {
+    translate: 0 0;
+  }
+}
+@keyframes eye-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.1);
+  }
 }

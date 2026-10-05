@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="52" height="35.96" viewBox="0 0 52 35.96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Cube 2 shadow">
+<mask id="mask0_0_491" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="52" height="36">
+<path id="Shadow mask" d="M0 12.45L0.08 11.95L0.34 11.47L0.74 11.03L1.29 10.65L18.44 0.75L19.11 0.43L19.87 0.19L20.7 0.05L21.56 0L22.42 0.05L23.24 0.19L24.01 0.43L24.67 0.75L41.82 10.65L42.37 11.03L42.78 11.47L51.66 22.54L51.91 23.02L52 23.52L51.91 24.01L51.66 24.49L51.26 24.93L50.71 25.32L33.56 35.22L32.89 35.53L32.13 35.77L31.3 35.91L30.44 35.96L29.58 35.91L28.75 35.77L27.99 35.53L27.32 35.22L10.18 25.32L9.63 24.93L9.22 24.49L0.34 13.42L0.08 12.94L0 12.45Z" fill="black"/>
+</mask>
+<g mask="url(#mask0_0_491)">
+<path id="Hatch" d="M-2 1H54M-2 4.2H54M-2 7.4H54M-2 10.6H54M-2 13.8H54M-2 17H54M-2 20.2H54M-2 23.4H54M-2 26.6H54M-2 29.8H54M-2 33H54" stroke="#B4B0A7" stroke-width="0.8" stroke-linecap="round"/>
+</g>
+</g>
+</svg>
