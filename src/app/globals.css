@@ -255,6 +255,14 @@ body {
    is uncovered through a soft gradient edge — bottom-up when opening a post,
    top-down when going back. The mask is three viewports tall (hidden, a soft
    ramp, shown) and slides past the snapshot. */
+/* Theme switch (ThemeToggle.tsx): the default view-transition crossfade,
+   slowed a little and eased so the colours settle softly. */
+html[data-theme-fade]::view-transition-old(root),
+html[data-theme-fade]::view-transition-new(root) {
+  animation-duration: 450ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 html[data-vt]::view-transition-old(root) {
   animation: none;
 }

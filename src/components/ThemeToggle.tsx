@@ -47,15 +47,27 @@ export function ThemeToggle() {
     const root = document.documentElement;
     const mode = (root.dataset.theme as Mode | undefined) ?? "system";
     const to = next[mode];
-    try {
-      if (to === "system") {
-        delete root.dataset.theme;
-        localStorage.removeItem("theme");
-      } else {
-        root.dataset.theme = to;
-        localStorage.setItem("theme", to);
-      }
-    } catch {}
+    const apply = () => {
+      try {
+        if (to === "system") {
+          delete root.dataset.theme;
+          localStorage.removeItem("theme");
+        } else {
+          root.dataset.theme = to;
+          localStorage.setItem("theme", to);
+        }
+      } catch {}
+    };
+
+    // Crossfade the whole page between themes with a view transition (see
+    // `data-theme-fade` in globals.css): it covers colours, images and the
+    // illustration's dark-mode filter alike, which CSS transitions can't.
+    if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      apply();
+      return;
+    }
+    root.dataset.themeFade = "";
+    document.startViewTransition(apply).finished.finally(() => delete root.dataset.themeFade);
   }
 
   return (
