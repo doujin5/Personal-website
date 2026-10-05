@@ -64,40 +64,49 @@ function drawnSize(l: Layer) {
 // box: the boxes overlap (the notebook's covers the cube stack, the laptop's
 // covers the notebook's edge) and per-box enter/leave events only fire when
 // the pointer crosses a box edge, so the wrong object — or none — lifted.
-type Mask = { box: ReturnType<typeof drawnBox>; group: string; alpha: Uint8ClampedArray; w: number; h: number };
+// Until a layer's image has been read (or if reading it fails) it falls back
+// to its box, so hover works from the first frame on slow connections.
+type Mask = { box: ReturnType<typeof drawnBox>; group: string; w: number; h: number; alpha: Uint8ClampedArray | null };
 const hittable = layers.filter((l) => !l.shadow).reverse(); // topmost first
 
-async function loadMasks(): Promise<Mask[]> {
-  return Promise.all(
-    hittable.map(async (l) => {
-      const box = drawnBox(l);
-      const w = Math.max(1, Math.round(box.width)), h = Math.max(1, Math.round(box.height));
-      const img = new window.Image();
-      img.src = `${d}${l.src}.svg`;
-      await img.decode();
-      const ctx = Object.assign(document.createElement("canvas"), { width: w, height: h }).getContext("2d", { willReadFrequently: true })!;
-      ctx.drawImage(img, 0, 0, w, h);
-      return { box, group: l.group, alpha: ctx.getImageData(0, 0, w, h).data, w, h };
-    }),
-  );
+function emptyMasks(): Mask[] {
+  return hittable.map((l) => {
+    const box = drawnBox(l);
+    return { box, group: l.group, w: Math.max(1, Math.round(box.width)), h: Math.max(1, Math.round(box.height)), alpha: null };
+  });
+}
+
+async function readAlpha(src: string, w: number, h: number) {
+  const img = new window.Image();
+  img.src = `${d}${src}.svg`;
+  await img.decode();
+  const ctx = Object.assign(document.createElement("canvas"), { width: w, height: h }).getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, w, h);
+  return ctx.getImageData(0, 0, w, h).data;
 }
 
 function groupAt(masks: Mask[], x: number, y: number) {
   for (const m of masks) {
     const px = Math.floor(x - m.box.x), py = Math.floor(y - m.box.y);
     if (px < 0 || py < 0 || px >= m.w || py >= m.h) continue;
-    if (m.alpha[(py * m.w + px) * 4 + 3] > 24) return m.group;
+    if (!m.alpha || m.alpha[(py * m.w + px) * 4 + 3] > 24) return m.group;
   }
   return null;
 }
 
 export function Illustration() {
   const [lifted, setLifted] = useState<string | null>(null);
-  const masks = useRef<Mask[] | null>(null);
+  const masks = useRef<Mask[]>(emptyMasks());
 
   useEffect(() => {
     let live = true;
-    loadMasks().then((m) => live && (masks.current = m), () => {});
+    hittable.forEach((l, i) => {
+      const m = masks.current[i];
+      readAlpha(l.src, m.w, m.h).then(
+        (alpha) => live && (m.alpha = alpha),
+        () => {},
+      );
+    });
     return () => {
       live = false;
     };
@@ -105,7 +114,6 @@ export function Illustration() {
 
   // Map the pointer back onto the unscaled 1440×550 canvas.
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!masks.current) return;
     const r = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * 1440, y = ((e.clientY - r.top) / r.height) * 550;
     const g = groupAt(masks.current, x, y);
