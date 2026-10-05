@@ -25,6 +25,17 @@ const themeScript = `try{var t=localStorage.getItem("theme");if(t==="light"||t==
 export const metadata: Metadata = {
   title: profile.name,
   description: profile.tagline,
+  // Monty logo from Figma ("Monty_Logo (64*64) light/dark"): slate strokes for
+  // light browser chrome, white strokes for dark. PNGs cover browsers without
+  // SVG favicon support.
+  icons: {
+    icon: [
+      { url: "/favicon-light.png", type: "image/png", sizes: "192x192", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.png", type: "image/png", sizes: "192x192", media: "(prefers-color-scheme: dark)" },
+      { url: "/favicon-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
+    ],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
