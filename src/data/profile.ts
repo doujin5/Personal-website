@@ -25,7 +25,7 @@ export const profile = {
     ],
     [
       "You can reach me at ",
-      { label: "@abhishekmonty24", href: "#" },
+      { label: "@abhishekmonty24", href: "https://x.com/abhishekmonty24" },
       " , ",
       { label: "abhishek.mohanty712@gmail.com", copy: true },
       ", or on ",
