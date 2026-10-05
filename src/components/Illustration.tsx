@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Layer geometry comes from the Figma frame "Isometric – Laptop & Pen (Light)"
 // (1440×550, node 348:43619), in paint order. `inset` is the stroke overflow of
@@ -49,14 +49,68 @@ const layers: Layer[] = [
   { src: "cube2b", x: 537.29, y: 458.05, w: 43.11, h: 51.891, inset: "-1.2% -1.45%", group: "cube2b" },
 ];
 
-/** Pixel size a layer's image is drawn at, including its stroke-overflow inset. */
-function drawnSize({ w, h, inset }: Layer) {
+/** Where a layer's image is drawn on the canvas, including its stroke-overflow inset. */
+function drawnBox({ x, y, w, h, inset }: Layer) {
   const [t, r = t, b = t, l = r] = (inset ?? "0").split(" ").map((v) => parseFloat(v) / 100);
-  return { width: Math.round(w * (1 - l - r)), height: Math.round(h * (1 - t - b)) };
+  return { x: x + l * w, y: y + t * h, width: w * (1 - l - r), height: h * (1 - t - b) };
+}
+
+function drawnSize(l: Layer) {
+  const { width, height } = drawnBox(l);
+  return { width: Math.round(width), height: Math.round(height) };
+}
+
+// Hover is hit-tested against each object's painted pixels rather than its
+// box: the boxes overlap (the notebook's covers the cube stack, the laptop's
+// covers the notebook's edge) and per-box enter/leave events only fire when
+// the pointer crosses a box edge, so the wrong object — or none — lifted.
+type Mask = { box: ReturnType<typeof drawnBox>; group: string; alpha: Uint8ClampedArray; w: number; h: number };
+const hittable = layers.filter((l) => !l.shadow).reverse(); // topmost first
+
+async function loadMasks(): Promise<Mask[]> {
+  return Promise.all(
+    hittable.map(async (l) => {
+      const box = drawnBox(l);
+      const w = Math.max(1, Math.round(box.width)), h = Math.max(1, Math.round(box.height));
+      const img = new window.Image();
+      img.src = `${d}${l.src}.svg`;
+      await img.decode();
+      const ctx = Object.assign(document.createElement("canvas"), { width: w, height: h }).getContext("2d", { willReadFrequently: true })!;
+      ctx.drawImage(img, 0, 0, w, h);
+      return { box, group: l.group, alpha: ctx.getImageData(0, 0, w, h).data, w, h };
+    }),
+  );
+}
+
+function groupAt(masks: Mask[], x: number, y: number) {
+  for (const m of masks) {
+    const px = Math.floor(x - m.box.x), py = Math.floor(y - m.box.y);
+    if (px < 0 || py < 0 || px >= m.w || py >= m.h) continue;
+    if (m.alpha[(py * m.w + px) * 4 + 3] > 24) return m.group;
+  }
+  return null;
 }
 
 export function Illustration() {
   const [lifted, setLifted] = useState<string | null>(null);
+  const masks = useRef<Mask[] | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    loadMasks().then((m) => live && (masks.current = m), () => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // Map the pointer back onto the unscaled 1440×550 canvas.
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!masks.current) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 1440, y = ((e.clientY - r.top) / r.height) * 550;
+    const g = groupAt(masks.current, x, y);
+    setLifted((prev) => (prev === g ? prev : g));
+  };
 
   return (
     <div
@@ -66,7 +120,12 @@ export function Illustration() {
       {/* The SVGs have light colours baked in; in dark mode the whole scene is
           inverted (hues kept) so white surfaces land on the #121212 page, and
           dimmed to 75% so the now-light outlines don't pull focus. */}
-      <div className="absolute top-0 left-1/2 ml-[-702px] h-[550px] w-[1440px] origin-[702px_0] scale-(--s) dark:opacity-75 dark:[filter:invert(0.93)_hue-rotate(180deg)]">
+      <div
+        className="absolute top-0 left-1/2 ml-[-702px] h-[550px] w-[1440px] origin-[702px_0] scale-(--s) dark:opacity-75 dark:[filter:invert(0.93)_hue-rotate(180deg)]"
+        onPointerMove={onPointerMove}
+        onPointerDown={onPointerMove}
+        onPointerLeave={() => setLifted(null)}
+      >
         {/* Shifted left of the Figma position so the grid's densest part sits
             under the laptop and cubes; the extra gradient fades the right edge
             into the page. */}
@@ -94,10 +153,8 @@ export function Illustration() {
           return (
             <div
               key={l.src}
-              className={`absolute ${l.shadow ? "pointer-events-none" : ""}`}
+              className="pointer-events-none absolute"
               style={{ left: l.x, top: l.y, width: l.w, height: l.h }}
-              onPointerEnter={l.shadow ? undefined : () => setLifted(l.group)}
-              onPointerLeave={l.shadow ? undefined : () => setLifted(null)}
             >
               <div
                 className={`absolute motion-safe:transition-[translate,opacity] motion-safe:duration-300 ${
