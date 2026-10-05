@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { LineReveal } from "@/components/LineReveal";
 import { RouteChangeSignal } from "@/components/TransitionLink";
-import { profile } from "@/data/profile";
 import { site } from "@/data/site";
 import "./globals.css";
 
@@ -26,7 +25,7 @@ const themeScript = `try{var t=localStorage.getItem("theme");if(t==="light"||t==
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: site.name,
-  description: profile.tagline,
+  description: site.description,
   // Only site-wide fields: pages inherit this object, so a title or url here
   // would leak onto the case studies.
   openGraph: { siteName: site.name, type: "website" },

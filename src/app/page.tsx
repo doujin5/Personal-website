@@ -13,6 +13,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: site.name,
+  description: site.description,
   url: `${site.url}/`,
   author: { "@type": "Person", name: profile.name },
 };
