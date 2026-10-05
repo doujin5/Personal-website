@@ -83,11 +83,12 @@ export function ThemeToggle() {
         </span>
       ))}
       {/* Current mode, styled like the email tooltip (Figma Tooltip). Sits
-          below the button (the header is near the top) and right-aligned so
-          it never runs off small screens. The label is picked by CSS. */}
+          below the button (the header is near the top), centred on the icon;
+          right-aligned on phone widths, where centring would push "System"
+          past the screen edge. The label is picked by CSS. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute top-full right-0 mt-2 -translate-y-1 rounded-sm border-[0.5px] border-line bg-canvas px-2 py-1 text-xs leading-4 font-medium whitespace-nowrap text-fg opacity-0 shadow-lifted transition-[opacity,translate] duration-150 group-hover/theme:translate-y-0 group-hover/theme:opacity-100 group-focus-visible/theme:translate-y-0 group-focus-visible/theme:opacity-100"
+        className="pointer-events-none absolute top-full right-0 mt-2 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 -translate-y-1 rounded-sm border-[0.5px] border-line bg-canvas px-2 py-1 text-xs leading-4 font-medium whitespace-nowrap text-fg opacity-0 shadow-lifted transition-[opacity,translate] duration-150 group-hover/theme:translate-y-0 group-hover/theme:opacity-100 group-focus-visible/theme:translate-y-0 group-focus-visible/theme:opacity-100"
       >
         {icons.map(({ mode }) => (
           <span key={mode} className={`theme-label-${mode}`}>
