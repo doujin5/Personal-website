@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { LineReveal } from "@/components/LineReveal";
 import { RouteChangeSignal } from "@/components/TransitionLink";
 import { profile } from "@/data/profile";
+import { site } from "@/data/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,8 +24,12 @@ const departureMono = localFont({
 const themeScript = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}if(!matchMedia("(prefers-reduced-motion: reduce)").matches){var h=document.documentElement;h.classList.add("reveal-pending");setTimeout(function(){if(!("revealReady" in h.dataset))h.classList.remove("reveal-pending")},3000)}`;
 
 export const metadata: Metadata = {
-  title: profile.name,
+  metadataBase: new URL(site.url),
+  title: site.name,
   description: profile.tagline,
+  // Only site-wide fields: pages inherit this object, so a title or url here
+  // would leak onto the case studies.
+  openGraph: { siteName: site.name, type: "website" },
   // Monty logo from Figma ("Monty_Logo (64*64) light/dark"): slate strokes for
   // light browser chrome, white strokes for dark. PNGs cover browsers without
   // SVG favicon support.
