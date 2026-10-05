@@ -6,7 +6,6 @@ export type Inline = string | InlineLink | InlineCopy;
 export const profile = {
   name: "Abhishek Mohanty",
   tagline: "Product designer | cyclist",
-  headerLink: { label: "Listen", href: "#" },
   bio: [
     ["A design thinker by the week and cyclist by the weekend."],
     [

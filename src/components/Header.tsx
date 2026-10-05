@@ -1,9 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { profile } from "@/data/profile";
-import { iconButtonClass } from "./iconButton";
+import { SoundToggle } from "./SoundToggle";
 import { ThemeToggle } from "./ThemeToggle";
-import { WaveformIcon } from "./WaveformIcon";
 
 export function Header() {
   return (
@@ -27,13 +26,7 @@ export function Header() {
         />
       </Link>
       <div className="flex items-center gap-2">
-        <a
-          href={profile.headerLink.href}
-          aria-label={profile.headerLink.label}
-          className={iconButtonClass}
-        >
-          <WaveformIcon />
-        </a>
+        <SoundToggle />
         <ThemeToggle />
       </div>
     </header>

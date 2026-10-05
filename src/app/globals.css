@@ -255,6 +255,35 @@ body {
    is uncovered through a soft gradient edge — bottom-up when opening a post,
    top-down when going back. The mask is three viewports tall (hidden, a soft
    ramp, shown) and slides past the snapshot. */
+/* Sound toggle (SoundToggle.tsx): bars bounce while on and shrink to dots
+   when off. Strokes don't scale (vector-effect), so caps stay round. With
+   reduced motion the bars hold still at staggered heights. */
+.sound-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sound-on .sound-bar {
+  animation: sound-bar var(--d) ease-in-out var(--delay) infinite alternate;
+}
+.sound-off .sound-bar {
+  transform: scaleY(0.05);
+}
+@keyframes sound-bar {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sound-on .sound-bar {
+    animation: none;
+    transform: scaleY(var(--rest));
+  }
+}
+
 /* Theme switch (ThemeToggle.tsx): the default view-transition crossfade,
    slowed a little and eased so the colours settle softly. */
 html[data-theme-fade]::view-transition-old(root),
