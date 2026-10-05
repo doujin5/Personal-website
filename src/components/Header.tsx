@@ -3,6 +3,7 @@ import Link from "next/link";
 import { profile } from "@/data/profile";
 import { iconButtonClass } from "./iconButton";
 import { ThemeToggle } from "./ThemeToggle";
+import { WaveformIcon } from "./WaveformIcon";
 
 export function Header() {
   return (
@@ -31,7 +32,7 @@ export function Header() {
           aria-label={profile.headerLink.label}
           className={iconButtonClass}
         >
-          <Image src="/icons/audio-waveform.svg" alt="" width={16} height={16} className="dark:invert" />
+          <WaveformIcon />
         </a>
         <ThemeToggle />
       </div>
