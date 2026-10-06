@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { BackButton } from "@/components/case-study/BackButton";
+import { PostControls } from "@/components/case-study/PostControls";
 import { CaseRuler } from "@/components/case-study/CaseRuler";
 import { CaseStudyView } from "@/components/case-study/CaseStudyView";
 import { TopBlur } from "@/components/case-study/TopBlur";
@@ -17,6 +18,7 @@ export default function Page() {
     <main>
       <TopBlur />
       <BackButton />
+      <PostControls />
       <CaseStudyView study={orderDeskAdmin} />
       <CaseRuler />
     </main>
