@@ -79,7 +79,7 @@ export function playTick() {
 export function tick(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const vary = 1 + (Math.random() - 0.5) * 0.12;
   const out = ac.createGain();
-  out.gain.value = 0.9;
+  out.gain.value = 0.55;
   out.connect(dest);
 
   const len = Math.floor(ac.sampleRate * 0.005);
