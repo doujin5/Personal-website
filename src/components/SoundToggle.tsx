@@ -1,25 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { iconButtonClass } from "./iconButton";
 
-// Sound on/off in the header, after zero.university's sound control: five
-// rounded bars that bounce like an equaliser while on and settle into a row
-// of dots when off (see `.sound-bar` in globals.css). Only the icon state for
-// now; the audio itself gets wired to `on` later.
+// Sound on/off in the header, after the audio button on why.zero.university:
+// a sine wave that travels sideways while sound is on and flattens into a
+// straight line when off (see `.sound-wave` in globals.css). Only the icon
+// state for now; the audio itself gets wired to `on` later.
 
-// Bar x positions in the 16×16 box, and each bar's bounce period and phase so
-// they never move in step. `rest` is the height kept with reduced motion.
-const bars = [
-  { x: 2.5, d: "0.9s", delay: "-0.3s", rest: 0.45 },
-  { x: 5.25, d: "0.7s", delay: "-0.6s", rest: 0.8 },
-  { x: 8, d: "1s", delay: "-0.1s", rest: 1 },
-  { x: 10.75, d: "0.75s", delay: "-0.45s", rest: 0.7 },
-  { x: 13.5, d: "0.85s", delay: "-0.2s", rest: 0.4 },
-];
+// One cycle across the icon, sampled at 11 points (x 1.6–18.4 in a 20×12
+// box, amplitude 3 around y=6) and shifted 1/12 of a cycle per frame. The
+// points are morphed with SMIL <animate>, which also works in Safari.
+const xs = Array.from({ length: 11 }, (_, i) => 1.6 + i * 1.68);
+const FRAMES = 12;
+function wavePoints(phase: number) {
+  return xs.map((x) => `${x.toFixed(2)},${(6 - 3 * Math.sin(((x - 1.6) / 16.4 + phase) * 2 * Math.PI)).toFixed(2)}`).join(" ");
+}
+const frames = Array.from({ length: FRAMES + 1 }, (_, i) => wavePoints(i / FRAMES));
 
 export function SoundToggle() {
   const [on, setOn] = useState(true);
+  const svg = useRef<SVGSVGElement>(null);
+
+  // Run the wave only while on (and motion is allowed); off freezes it where
+  // it is and the CSS flattens it.
+  useEffect(() => {
+    const el = svg.current;
+    if (!el) return;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => (on && !reduce.matches ? el.unpauseAnimations() : el.pauseAnimations());
+    sync();
+    reduce.addEventListener("change", sync);
+    return () => reduce.removeEventListener("change", sync);
+  }, [on]);
 
   return (
     <button
@@ -30,27 +43,26 @@ export function SoundToggle() {
       className={`${iconButtonClass} cursor-pointer`}
     >
       <svg
-        width={16}
-        height={16}
-        viewBox="0 0 16 16"
+        ref={svg}
+        width={18}
+        height={11}
+        viewBox="0 0 20 12"
+        fill="none"
         aria-hidden
         className={`block text-[#646464] dark:text-[#9b9b9b] ${on ? "sound-on" : "sound-off"}`}
       >
-        {bars.map((b) => (
-          <line
-            key={b.x}
-            className="sound-bar"
-            x1={b.x}
-            x2={b.x}
-            y1={3}
-            y2={13}
+        <g className="sound-wave">
+          <polyline
+            points={frames[0]}
             stroke="currentColor"
             strokeWidth={1.5}
             strokeLinecap="round"
+            strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
-            style={{ "--d": b.d, "--delay": b.delay, "--rest": b.rest } as React.CSSProperties}
-          />
-        ))}
+          >
+            <animate attributeName="points" dur="1.2s" repeatCount="indefinite" calcMode="linear" values={frames.join(";")} />
+          </polyline>
+        </g>
       </svg>
     </button>
   );

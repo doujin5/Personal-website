@@ -255,32 +255,20 @@ body {
    is uncovered through a soft gradient edge — bottom-up when opening a post,
    top-down when going back. The mask is three viewports tall (hidden, a soft
    ramp, shown) and slides past the snapshot. */
-/* Sound toggle (SoundToggle.tsx): bars bounce while on and shrink to dots
-   when off. Strokes don't scale (vector-effect), so caps stay round. With
-   reduced motion the bars hold still at staggered heights. */
-.sound-bar {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+/* Sound toggle (SoundToggle.tsx), after why.zero.university: when off, the
+   wave is squashed flat into a line; on, it springs back. The stroke doesn't
+   scale (vector-effect), so the line keeps its weight. */
+.sound-wave {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.sound-on .sound-bar {
-  animation: sound-bar var(--d) ease-in-out var(--delay) infinite alternate;
-}
-.sound-off .sound-bar {
+.sound-off .sound-wave {
   transform: scaleY(0.05);
 }
-@keyframes sound-bar {
-  from {
-    transform: scaleY(0.25);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
 @media (prefers-reduced-motion: reduce) {
-  .sound-on .sound-bar {
-    animation: none;
-    transform: scaleY(var(--rest));
+  .sound-wave {
+    transition: none;
   }
 }
 
