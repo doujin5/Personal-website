@@ -178,9 +178,9 @@ export function sandSwipe(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const air = ac.createBiquadFilter();
   air.type = "highshelf";
   air.frequency.value = 5000;
-  air.gain.value = 4.5;
+  air.gain.value = 3;
   const flowGain = ac.createGain();
-  swell(flowGain, 0.1);
+  swell(flowGain, 0.06);
   flowSrc.connect(band).connect(soft).connect(air).connect(flowGain).connect(out);
 
   const bodySrc = ac.createBufferSource();
@@ -189,7 +189,7 @@ export function sandSwipe(ac: BaseAudioContext, t: number, dest: AudioNode) {
   low.type = "lowpass";
   low.frequency.value = 550;
   const bodyGain = ac.createGain();
-  swell(bodyGain, 0.045);
+  swell(bodyGain, 0.027);
   bodySrc.connect(low).connect(bodyGain).connect(out);
 
   flowSrc.start(t);
