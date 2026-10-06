@@ -28,7 +28,7 @@ export const profile = {
       " , ",
       { label: "abhishek.mohanty712@gmail.com", copy: true },
       ", or on ",
-      { label: "LinkedIn", href: "#" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/abhishek-mohanty-8938a5144/" },
     ],
   ] satisfies Inline[][],
 };
