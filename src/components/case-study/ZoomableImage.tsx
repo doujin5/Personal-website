@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { playOpenSound } from "@/lib/sound";
 
 // Image hover + lightbox after makingsoftware.com: hairline guides fade in
 // along the image's edges on hover, running past its corners; clicking opens a full-screen view over a blurred page with the
@@ -89,7 +90,10 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
       <button
         type="button"
         data-reveal
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          playOpenSound();
+          setOpen(true);
+        }}
         aria-label={`Enlarge: ${alt}`}
         className="group/zoom relative block w-full cursor-pointer focus-visible:outline-none"
       >

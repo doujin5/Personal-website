@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { isSoundOn, onSoundChange, setSoundOn } from "@/lib/sound";
 import { iconButtonClass } from "./iconButton";
 
 // Sound on/off in the header, after the audio button on why.zero.university:
@@ -19,7 +20,9 @@ function wavePoints(phase: number) {
 const frames = Array.from({ length: FRAMES + 1 }, (_, i) => wavePoints(i / FRAMES));
 
 export function SoundToggle() {
-  const [on, setOn] = useState(true);
+  // The choice is remembered (lib/sound.ts) so UI sounds elsewhere, like the
+  // case-study image click, follow it. The server render assumes "on".
+  const on = useSyncExternalStore(onSoundChange, isSoundOn, () => true);
   const svg = useRef<SVGSVGElement>(null);
 
   // Run the wave only while on (and motion is allowed); off freezes it where
@@ -39,7 +42,7 @@ export function SoundToggle() {
       type="button"
       aria-label={on ? "Sound on" : "Sound off"}
       aria-pressed={on}
-      onClick={() => setOn((v) => !v)}
+      onClick={() => setSoundOn(!on)}
       className={`${iconButtonClass} cursor-pointer`}
     >
       <svg
