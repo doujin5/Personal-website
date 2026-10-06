@@ -213,7 +213,7 @@ export function playHoverSound() {
 }
 
 /** A fist beating into sand, Dune-style, kept short for hovering: a deep,
- *  round impact (~95 → 55 Hz), a broad heavily-damped low-mid thud (~160 Hz)
+ *  round impact (~75 → 42 Hz), a broad heavily-damped low thud (~120 Hz)
  *  so it lands "into" something soft, and a brief dull crunch of displaced
  *  sand. Sand absorbs the hit, so nothing rings on. Slightly different each
  *  time. */
@@ -227,14 +227,14 @@ export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const impact = ac.createOscillator();
   const impactGain = ac.createGain();
   impact.type = "sine";
-  impact.frequency.setValueAtTime(95 * vary, t);
-  impact.frequency.exponentialRampToValueAtTime(55 * vary, t + 0.08);
+  impact.frequency.setValueAtTime(75 * vary, t);
+  impact.frequency.exponentialRampToValueAtTime(42 * vary, t + 0.09);
   impactGain.gain.setValueAtTime(0.0001, t);
-  impactGain.gain.exponentialRampToValueAtTime(0.13, t + 0.006);
-  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+  impactGain.gain.exponentialRampToValueAtTime(0.15, t + 0.007);
+  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
   impact.connect(impactGain).connect(out);
   impact.start(t);
-  impact.stop(t + 0.14);
+  impact.stop(t + 0.16);
 
   const noise = (seconds: number, grainy: boolean) => {
     const len = Math.floor(ac.sampleRate * seconds);
@@ -256,7 +256,7 @@ export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const thudSrc = noise(0.012, false);
   const thud = ac.createBiquadFilter();
   thud.type = "bandpass";
-  thud.frequency.value = 160 * vary;
+  thud.frequency.value = 120 * vary;
   thud.Q.value = 3;
   const thudGain = ac.createGain();
   thudGain.gain.value = 0.55;
@@ -267,11 +267,11 @@ export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const crunchSrc = noise(0.03, true);
   const grit = ac.createBiquadFilter();
   grit.type = "bandpass";
-  grit.frequency.value = 1300 * vary;
+  grit.frequency.value = 1000 * vary;
   grit.Q.value = 0.8;
   const dull = ac.createBiquadFilter();
   dull.type = "lowpass";
-  dull.frequency.value = 2600;
+  dull.frequency.value = 2200;
   const crunchGain = ac.createGain();
   crunchGain.gain.value = 0.05;
   crunchSrc.connect(grit).connect(dull).connect(crunchGain).connect(out);
