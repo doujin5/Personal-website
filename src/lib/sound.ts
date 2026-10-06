@@ -27,14 +27,87 @@ export function onSoundChange(fn: () => void) {
 
 let ctx: AudioContext | null = null;
 
+/** The shared audio context, once the page may play sound. Browsers only
+ *  allow audio after a click or key press, so hover sounds stay silent until
+ *  then; the first such gesture unlocks the context (needed for Safari). */
+function audio() {
+  if (!ctx) {
+    if (!navigator.userActivation?.hasBeenActive) return null;
+    ctx = new AudioContext();
+  }
+  if (ctx.state === "suspended") void ctx.resume();
+  return ctx;
+}
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    try {
+      ctx ??= new AudioContext();
+      void ctx.resume();
+    } catch {}
+  };
+  addEventListener("pointerdown", unlock, { once: true, capture: true });
+  addEventListener("keydown", unlock, { once: true, capture: true });
+}
+
 /** Plays the image-open sound. Must be called from a user gesture. */
 export function playOpenSound() {
   if (!isSoundOn()) return;
   try {
-    ctx ??= new AudioContext();
-    if (ctx.state === "suspended") void ctx.resume();
-    thump(ctx, ctx.currentTime, ctx.destination);
+    const ac = audio();
+    if (ac) thump(ac, ac.currentTime, ac.destination);
   } catch {}
+}
+
+let lastTick = 0;
+
+/** One ratchet click for passing over a ruler tick, like winding the
+ *  thumper's timer. Throttled so fast sweeps stay a rattle, not a buzz. */
+export function playTick() {
+  if (!isSoundOn()) return;
+  const now = performance.now();
+  if (now - lastTick < 28) return;
+  lastTick = now;
+  try {
+    const ac = audio();
+    if (ac) tick(ac, ac.currentTime, ac.destination);
+  } catch {}
+}
+
+/** A dial-ratchet tick: a few milliseconds of bright band-passed noise (the
+ *  pawl snapping over a tooth) over a faint low knock, each slightly detuned
+ *  so a sweep sounds mechanical rather than synthetic. */
+export function tick(ac: BaseAudioContext, t: number, dest: AudioNode) {
+  const vary = 1 + (Math.random() - 0.5) * 0.12;
+  const out = ac.createGain();
+  out.gain.value = 0.9;
+  out.connect(dest);
+
+  const len = Math.floor(ac.sampleRate * 0.005);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 8;
+  const click = ac.createBufferSource();
+  const band = ac.createBiquadFilter();
+  const clickGain = ac.createGain();
+  click.buffer = buf;
+  band.type = "bandpass";
+  band.frequency.value = 4800 * vary;
+  band.Q.value = 1.4;
+  clickGain.gain.value = 0.4;
+  click.connect(band).connect(clickGain).connect(out);
+  click.start(t);
+
+  const knock = ac.createOscillator();
+  const knockGain = ac.createGain();
+  knock.type = "sine";
+  knock.frequency.setValueAtTime(260 * vary, t);
+  knock.frequency.exponentialRampToValueAtTime(170 * vary, t + 0.012);
+  knockGain.gain.setValueAtTime(0.0001, t);
+  knockGain.gain.exponentialRampToValueAtTime(0.04, t + 0.0015);
+  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+  knock.connect(knockGain).connect(out);
+  knock.start(t);
+  knock.stop(t + 0.03);
 }
 
 /** One beat of a Dune thumper, scaled down to a UI click: a deep sub thump,

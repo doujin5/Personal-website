@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { playTick } from "@/lib/sound";
 
 // Side ruler from the case-study frame (Figma 390:64244), behaving like the
 // makingsoftware.com side ruler: an even column of 0.5px ticks (~9px apart,
@@ -212,6 +213,7 @@ export function CaseRuler() {
               data-heading={name ? "" : undefined}
               aria-label={name ?? `Jump to ${(i / last).toFixed(2)}`}
               onClick={() => jump(i / last)}
+              onPointerEnter={playTick}
               // A tall, wide hit area per tick, like makingsoftware.com.
               className="group/tick absolute right-0 flex h-2 w-24 -translate-y-1/2 cursor-pointer items-center justify-end gap-1"
               style={{ top: i * TICK_GAP }}
