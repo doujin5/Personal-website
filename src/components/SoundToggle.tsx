@@ -41,18 +41,28 @@ export function SoundToggle() {
     return () => reduce.removeEventListener("change", sync);
   }, [on]);
 
+  const label = on ? "Sound on" : chosen ? "Enable sound" : "Sound off";
+
   return (
     <button
       type="button"
-      aria-label={on ? "Sound on" : chosen ? "Enable sound" : "Sound off"}
+      aria-label={label}
       aria-pressed={on}
       onClick={() => {
         // The click that unlocked audio just turns the (chosen) sound on.
         if (takeUnlockClick() && chosen) return;
         setSoundOn(!chosen);
       }}
-      className={`${iconButtonClass} cursor-pointer`}
+      className={`group/sound ${iconButtonClass} cursor-pointer`}
     >
+      {/* Current state, styled like the theme toggle's tooltip: below the
+          button, centred on the icon. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute top-full left-1/2 mt-2 -translate-x-1/2 -translate-y-1 rounded-sm border-[0.5px] border-line bg-canvas px-2 py-1 text-xs leading-4 font-medium whitespace-nowrap text-fg opacity-0 shadow-lifted transition-[opacity,translate] duration-150 group-hover/sound:translate-y-0 group-hover/sound:opacity-100 group-focus-visible/sound:translate-y-0 group-focus-visible/sound:opacity-100"
+      >
+        {label}
+      </span>
       <svg
         ref={svg}
         width={18}
