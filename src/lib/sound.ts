@@ -98,14 +98,102 @@ export function playCloseSound() {
   } catch {}
 }
 
-/** Plays the page-wipe sound for going back: the same whoosh, stretched to
- *  the ~0.68 s page wipe. */
+/** Plays the sand-swipe sound for going back; it starts with the ~0.68 s
+ *  wipe and trails off slowly just after it. */
 export function playWipeSound() {
   if (!isSoundOn()) return;
   try {
     const ac = audio();
-    if (ac) whoosh(ac, ac.currentTime, ac.destination, 0.68);
+    if (ac) sandSwipe(ac, ac.currentTime, ac.destination);
   } catch {}
+}
+
+/** Sand sliding away as the page wipes (~0.95 s): one smooth, continuous flow
+ *  of soft pink noise through a wide band that darkens as it slides, over a
+ *  soft low body, easing in and dissolving slowly, with a slight
+ *  right-to-left drift. No grains or separate events, so it reads as a
+ *  single smooth slide. */
+export function sandSwipe(ac: BaseAudioContext, t: number, dest: AudioNode) {
+  const vary = 1 + (Math.random() - 0.5) * 0.08;
+  const dur = 0.95 * vary;
+  const sr = ac.sampleRate;
+  const len = Math.floor(sr * dur);
+
+  // Flow: pink noise (Paul Kellet's filter), softer and rounder than white,
+  // like distant surf or wind over sand; no grain, so nothing interrupts it.
+  const flow = ac.createBuffer(1, len, sr);
+  const f = flow.getChannelData(0);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < len; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179;
+    b1 = 0.99332 * b1 + w * 0.0750759;
+    b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856;
+    b4 = 0.55 * b4 + w * 0.5329522;
+    b5 = -0.7616 * b5 - w * 0.016898;
+    f[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.2;
+    b6 = w * 0.115926;
+  }
+  // Body: smoothed (brown) noise for the soft weight underneath.
+  const body = ac.createBuffer(1, len, sr);
+  const b = body.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    last = last * 0.9 + (Math.random() * 2 - 1) * 0.1;
+    b[i] = last * 3;
+  }
+
+  // Eases in over the first 40%, then dissolves more slowly over the rest.
+  const swell = (node: GainNode, peak: number) => {
+    const c = new Float32Array(96);
+    for (let i = 0; i < c.length; i++) {
+      const x = i / (c.length - 1);
+      const s = x < 0.4 ? x / 0.4 : 1 - (x - 0.4) / 0.6;
+      c[i] = peak * vary * Math.sin((s * Math.PI) / 2) ** 2;
+    }
+    node.gain.setValueAtTime(0, t);
+    node.gain.setValueCurveAtTime(c, t, dur);
+  };
+
+  const pan = ac.createStereoPanner?.();
+  if (pan) {
+    pan.pan.setValueAtTime(0.15, t);
+    pan.pan.linearRampToValueAtTime(-0.12, t + dur);
+    pan.connect(dest);
+  }
+  const out = pan ?? dest;
+
+  const flowSrc = ac.createBufferSource();
+  flowSrc.buffer = flow;
+  const band = ac.createBiquadFilter();
+  band.type = "bandpass";
+  band.Q.value = 0.25;
+  band.frequency.setValueAtTime(1700 * vary, t);
+  band.frequency.exponentialRampToValueAtTime(1000 * vary, t + dur);
+  const soft = ac.createBiquadFilter();
+  soft.type = "lowpass";
+  soft.frequency.value = 5000;
+  // A little air on top: the light "sss" of fine sand, without grit.
+  const air = ac.createBiquadFilter();
+  air.type = "highshelf";
+  air.frequency.value = 5000;
+  air.gain.value = 4.5;
+  const flowGain = ac.createGain();
+  swell(flowGain, 0.1);
+  flowSrc.connect(band).connect(soft).connect(air).connect(flowGain).connect(out);
+
+  const bodySrc = ac.createBufferSource();
+  bodySrc.buffer = body;
+  const low = ac.createBiquadFilter();
+  low.type = "lowpass";
+  low.frequency.value = 550;
+  const bodyGain = ac.createGain();
+  swell(bodyGain, 0.045);
+  bodySrc.connect(low).connect(bodyGain).connect(out);
+
+  flowSrc.start(t);
+  bodySrc.start(t);
 }
 
 /** A soft, natural whoosh for an image settling back into the page, shaped
