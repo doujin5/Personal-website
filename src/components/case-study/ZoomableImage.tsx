@@ -65,7 +65,8 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
     return () => cancelAnimationFrame(frame);
   }, [open, caption.length]);
 
-  // Close: shrink back into the thumbnail, then tear down.
+  // Close: wipe the whole view away top to bottom with a soft edge, the same
+  // mask sweep as the page wipe (vt-wipe in globals.css), then tear down.
   // EXIT sits inside the dialog, so its click reaches the dialog's handler
   // too; `closing` keeps that to a single close (and a single whoosh).
   function close() {
@@ -81,14 +82,20 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
       setTyped(0);
     };
     if (reduced()) return done();
-    const from = thumb.current!.getBoundingClientRect();
-    const to = big.current!.getBoundingClientRect();
-    big.current!.animate([{ transform: "none" }, { transform: flip(from, to) }], {
-      duration: 260,
-      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-      fill: "forwards",
-    });
-    d.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: "ease-in", fill: "forwards" }).finished.then(done);
+    // A mask three viewports tall (hidden, soft ramp, shown) slid from
+    // "shown" to "hidden", so the hidden part sweeps down from the top.
+    for (const p of ["mask", "-webkit-mask"]) {
+      d.style.setProperty(`${p}-image`, "linear-gradient(to bottom, transparent 37.5%, #000 62.5%)");
+      d.style.setProperty(`${p}-size`, "100% 300%");
+      d.style.setProperty(`${p}-repeat`, "no-repeat");
+    }
+    d.animate(
+      [
+        { maskPosition: "0 100%", webkitMaskPosition: "0 100%" },
+        { maskPosition: "0 0%", webkitMaskPosition: "0 0%" },
+      ],
+      { duration: 560, easing: "cubic-bezier(0.37, 0, 0.25, 1)", fill: "forwards" },
+    ).finished.then(done);
   }
 
   return (
