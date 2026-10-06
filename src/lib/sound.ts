@@ -213,13 +213,12 @@ export function playHoverSound() {
   } catch {}
 }
 
-/** Paul's final check in Dune: a deliberate, heavy fist strike into a deep,
- *  packed dune, heard in a valley. A soft ~20 ms onset (deep sand gives, it
- *  doesn't snap), a toneless deep "whoom" of packed sand, a quiet very low
- *  boom under it (kept low so it reads as weight, not a ringing door), the
- *  hush of sand compressing under the fist, a short contact transient for a
- *  clear front edge, and the valley: a light, bright reverb
- *  with two faint echoes off the dune walls, trailing away over ~1.5 s. */
+/** Paul's final check in Dune (matched to the film at ~1:50–1:55): a deep,
+ *  slow fist thud into packed sand, heard in a valley. Almost all of it sits
+ *  in the sub and low bass: a deep front that lands in ~40 ms, a slower
+ *  swelling body of sand (~130 ms rise, ~0.5 s fade), a damped ~95 Hz thud,
+ *  and a dark, wide valley reverb (~1 s decay, staying bass-heavy) with one
+ *  faint echo at ~0.45 s. */
 export function duneCheck(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const buffer = (seconds: number, fill: (i: number, len: number) => number) => {
     const len = Math.floor(ac.sampleRate * seconds);
@@ -242,84 +241,70 @@ export function duneCheck(ac: BaseAudioContext, t: number, dest: AudioNode) {
     g.gain.value = v;
     return g;
   };
-  // Soft onset over `atk` of the length, then a power-curve decay.
+  // Rise over `atk` of the length, then a power-curve fade.
   const env = (x: number, atk: number, pow: number) => Math.min(1, x / atk) * (1 - x) ** pow;
+  const brown = (seconds: number, atk: number, pow: number, gain: number) => {
+    let last = 0;
+    return buffer(seconds, (i, len) => {
+      last = last * 0.97 + (Math.random() * 2 - 1) * 0.03;
+      return last * gain * env(i / len, atk, pow);
+    });
+  };
 
   const out = level(0.06);
   out.connect(dest);
   const verb = ac.createConvolver();
   verb.normalize = true;
   verb.buffer = valley(ac);
-  verb.connect(filter("lowpass", 2400)).connect(level(0.32)).connect(out);
+  verb.connect(filter("lowpass", 280)).connect(level(0.7)).connect(out);
   const dry = level(1);
   dry.connect(out);
   dry.connect(verb);
 
-  // Whoom: toneless deep packed sand.
-  let last = 0;
-  const whoom = buffer(0.42, (i, len) => {
-    last = last * 0.96 + (Math.random() * 2 - 1) * 0.04;
-    return last * 14 * env(i / len, 0.05, 2.2);
-  });
-  whoom.connect(filter("lowpass", 400)).connect(level(0.55)).connect(dry);
-  whoom.start(t);
+  // Front: the deep blow, landing in ~40 ms.
+  const front = ac.createOscillator();
+  const frontGain = ac.createGain();
+  front.type = "sine";
+  front.frequency.setValueAtTime(50, t);
+  front.frequency.exponentialRampToValueAtTime(36, t + 0.25);
+  frontGain.gain.setValueAtTime(0.0001, t);
+  frontGain.gain.exponentialRampToValueAtTime(0.22, t + 0.04);
+  frontGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+  front.connect(frontGain).connect(dry);
+  front.start(t);
+  front.stop(t + 0.38);
 
-  // Boom: a quiet, very deep body under it.
-  const boom = ac.createOscillator();
-  const boomGain = ac.createGain();
-  boom.type = "sine";
-  boom.frequency.setValueAtTime(52, t);
-  boom.frequency.exponentialRampToValueAtTime(36, t + 0.3);
-  boomGain.gain.setValueAtTime(0.0001, t);
-  boomGain.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
-  boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-  boom.connect(boomGain).connect(dry);
-  boom.start(t);
-  boom.stop(t + 0.47);
+  // Swell: the slower, toneless body of sand taking the blow.
+  const swell = brown(0.55, 0.24, 1.6, 18);
+  swell.connect(filter("lowpass", 110)).connect(level(0.8)).connect(dry);
+  swell.start(t);
 
-  // Hush: sand compressing under the fist (pink noise, Paul Kellet's filter).
-  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-  const hush = buffer(0.3, (i, len) => {
-    const w = Math.random() * 2 - 1;
-    b0 = 0.99886 * b0 + w * 0.0555179;
-    b1 = 0.99332 * b1 + w * 0.0750759;
-    b2 = 0.969 * b2 + w * 0.153852;
-    b3 = 0.8665 * b3 + w * 0.3104856;
-    b4 = 0.55 * b4 + w * 0.5329522;
-    b5 = -0.7616 * b5 - w * 0.016898;
-    const pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.2;
-    b6 = w * 0.115926;
-    return pink * env(i / len, 0.08, 2);
-  });
-  hush.connect(filter("bandpass", 900, 0.45)).connect(filter("lowpass", 4000)).connect(level(0.42)).connect(dry);
-  hush.start(t + 0.004);
+  // Thud: a damped low layer around 120 Hz.
+  const thud = brown(0.32, 0.12, 2, 14);
+  thud.connect(filter("bandpass", 95, 0.8)).connect(level(0.32)).connect(dry);
+  thud.start(t);
 
-  // Contact: the fist meeting the sand, a short quiet transient that gives
-  // the strike a clear front edge.
-  const contact = buffer(0.012, (i, len) => (Math.random() * 2 - 1) * (1 - i / len) ** 3);
-  contact.connect(filter("bandpass", 1800, 0.8)).connect(level(0.22)).connect(dry);
-  contact.start(t);
+  // A trace of sand on top (the film keeps mid and high under ~3%).
+  const grit = brown(0.22, 0.1, 2.5, 10);
+  grit.connect(filter("bandpass", 450, 0.6)).connect(filter("lowpass", 900)).connect(level(0.03)).connect(dry);
+  grit.start(t);
 }
 
-// The valley's reverb: decaying noise with two early echoes off the dune
-// walls (~0.12 s and ~0.27 s). Built once per audio context and reused.
+// The valley's reverb: wide (decorrelated left/right) noise decaying over
+// ~1 s, with one faint echo off the dune walls at ~0.45 s. Built once per
+// audio context and reused.
 const valleys = new WeakMap<BaseAudioContext, AudioBuffer>();
 function valley(ac: BaseAudioContext) {
   let ir = valleys.get(ac);
   if (ir) return ir;
   const sr = ac.sampleRate;
-  const len = Math.floor(sr * 1.6);
+  const len = Math.floor(sr * 1.4);
   ir = ac.createBuffer(2, len, sr);
   for (let ch = 0; ch < 2; ch++) {
     const d = ir.getChannelData(ch);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-i / len) * 5.5) * 0.5;
-    for (const [sec, amp] of [
-      [0.12, 0.35],
-      [0.27, 0.2],
-    ]) {
-      const at = Math.floor(sr * (sec + (ch ? 0.011 : 0)));
-      for (let k = 0; k < 400; k++) d[at + k] += (Math.random() * 2 - 1) * amp * (1 - k / 400);
-    }
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-6.9 * i) / sr / 1.0) * 0.5; // RT60 ≈ 1 s
+    const at = Math.floor(sr * (0.45 + (ch ? 0.013 : 0)));
+    for (let k = 0; k < 1200; k++) d[at + k] += (Math.random() * 2 - 1) * 0.12 * (1 - k / 1200);
   }
   valleys.set(ac, ir);
   return ir;
