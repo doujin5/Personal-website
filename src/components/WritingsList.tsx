@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { writings } from "@/data/writings";
+import { HoverSoundList } from "./HoverSoundList";
 import { SectionLabel } from "./SectionLabel";
 import { TransitionLink } from "./TransitionLink";
 
@@ -13,7 +14,7 @@ export function WritingsList() {
   return (
     <>
       <SectionLabel>Writings</SectionLabel>
-      <ul className="flex w-full flex-col gap-3">
+      <HoverSoundList className="flex w-full flex-col gap-3">
         {writings.map((w) => {
           // Posts with their own page open with the page wipe.
           const post = w.href.startsWith("/");
@@ -55,7 +56,7 @@ export function WritingsList() {
             </li>
           );
         })}
-      </ul>
+      </HoverSoundList>
     </>
   );
 }

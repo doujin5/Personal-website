@@ -279,6 +279,86 @@ export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode, length 
   flutter.stop(t + dur);
 }
 
+let lastHover = 0;
+
+/** Plays the soft hover "tock" for list rows. */
+export function playHoverSound() {
+  if (!isSoundOn()) return;
+  const now = performance.now();
+  if (now - lastHover < 40) return;
+  lastHover = now;
+  try {
+    const ac = audio();
+    if (ac) tock(ac, ac.currentTime, ac.destination);
+  } catch {}
+}
+
+/** A fist beating into sand, Dune-style, kept short for hovering: a deep,
+ *  round impact (~95 → 55 Hz), a broad heavily-damped low-mid thud (~160 Hz)
+ *  so it lands "into" something soft, and a brief dull crunch of displaced
+ *  sand. Sand absorbs the hit, so nothing rings on. Slightly different each
+ *  time. */
+export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
+  const vary = 1 + (Math.random() - 0.5) * 0.12;
+  const out = ac.createGain();
+  out.gain.value = 0.68 * (1 + (Math.random() - 0.5) * 0.25);
+  out.connect(dest);
+
+  // Impact: the weight of the fist.
+  const impact = ac.createOscillator();
+  const impactGain = ac.createGain();
+  impact.type = "sine";
+  impact.frequency.setValueAtTime(95 * vary, t);
+  impact.frequency.exponentialRampToValueAtTime(55 * vary, t + 0.08);
+  impactGain.gain.setValueAtTime(0.0001, t);
+  impactGain.gain.exponentialRampToValueAtTime(0.13, t + 0.006);
+  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+  impact.connect(impactGain).connect(out);
+  impact.start(t);
+  impact.stop(t + 0.14);
+
+  const noise = (seconds: number, grainy: boolean) => {
+    const len = Math.floor(ac.sampleRate * seconds);
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    let grain = 0;
+    for (let i = 0; i < len; i++) {
+      const fade = (1 - i / len) ** 2;
+      if (grainy && Math.random() < 0.08) grain = 0.5 + Math.random() * 0.5;
+      d[i] = (Math.random() * 2 - 1) * fade * (grainy ? 0.35 + grain : 1);
+      grain *= 0.85;
+    }
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    return src;
+  };
+
+  // Thud: a broad, damped low-mid body, struck by a soft burst.
+  const thudSrc = noise(0.012, false);
+  const thud = ac.createBiquadFilter();
+  thud.type = "bandpass";
+  thud.frequency.value = 160 * vary;
+  thud.Q.value = 3;
+  const thudGain = ac.createGain();
+  thudGain.gain.value = 0.55;
+  thudSrc.connect(thud).connect(thudGain).connect(out);
+  thudSrc.start(t);
+
+  // Crunch: a brief, dull spray of displaced sand.
+  const crunchSrc = noise(0.03, true);
+  const grit = ac.createBiquadFilter();
+  grit.type = "bandpass";
+  grit.frequency.value = 1300 * vary;
+  grit.Q.value = 0.8;
+  const dull = ac.createBiquadFilter();
+  dull.type = "lowpass";
+  dull.frequency.value = 2600;
+  const crunchGain = ac.createGain();
+  crunchGain.gain.value = 0.05;
+  crunchSrc.connect(grit).connect(dull).connect(crunchGain).connect(out);
+  crunchSrc.start(t + 0.003);
+}
+
 let lastTick = 0;
 
 /** One ratchet click for passing over a ruler tick, like winding the
