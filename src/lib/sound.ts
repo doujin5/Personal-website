@@ -28,25 +28,56 @@ export function onSoundChange(fn: () => void) {
 let ctx: AudioContext | null = null;
 
 /** The shared audio context, once the page may play sound. Browsers only
- *  allow audio after a click or key press, so hover sounds stay silent until
- *  then; the first such gesture unlocks the context (needed for Safari). */
+ *  allow audio after a click, tap or key press (hovering and scrolling don't
+ *  count), and every page load starts locked again. */
 function audio() {
   if (!ctx) {
     if (!navigator.userActivation?.hasBeenActive) return null;
     ctx = new AudioContext();
+    watch(ctx);
   }
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
 }
+
+/** Whether sound can actually be heard yet (audio unlocked by a gesture). */
+export function isAudioUnlocked() {
+  return ctx?.state === "running";
+}
+
+function watch(ac: AudioContext) {
+  ac.addEventListener("statechange", () => window.dispatchEvent(new Event(EVENT)));
+}
+
+// The first click, tap or key press anywhere unlocks audio. If that same
+// click lands on the sound toggle, it should only unlock, not also switch
+// sound off; `unlockClick` marks that click and is cleared once it's done.
+let unlockClick = false;
 if (typeof window !== "undefined") {
   const unlock = () => {
+    removeEventListener("pointerdown", unlock, true);
+    removeEventListener("keydown", unlock, true);
     try {
-      ctx ??= new AudioContext();
+      if (!ctx) {
+        ctx = new AudioContext();
+        watch(ctx);
+      }
       void ctx.resume();
     } catch {}
+    unlockClick = true;
+    addEventListener("click", () => (unlockClick = false), { once: true });
+    setTimeout(() => (unlockClick = false), 1500); // no click followed (e.g. a key press)
+    window.dispatchEvent(new Event(EVENT));
   };
-  addEventListener("pointerdown", unlock, { once: true, capture: true });
-  addEventListener("keydown", unlock, { once: true, capture: true });
+  addEventListener("pointerdown", unlock, true);
+  addEventListener("keydown", unlock, true);
+}
+
+/** True once, for the click that unlocked audio. */
+export function takeUnlockClick() {
+  const was = unlockClick;
+  unlockClick = false;
+  return was;
 }
 
 /** Plays the image-open sound. Must be called from a user gesture. */

@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { isSoundOn, onSoundChange, setSoundOn } from "@/lib/sound";
+import { isAudioUnlocked, isSoundOn, onSoundChange, setSoundOn, takeUnlockClick } from "@/lib/sound";
 import { iconButtonClass } from "./iconButton";
 
-// Sound on/off in the header, after the audio button on why.zero.university:
-// a sine wave that travels sideways while sound is on and flattens into a
-// straight line when off (see `.sound-wave` in globals.css). Only the icon
-// state for now; the audio itself gets wired to `on` later.
+// Sound on/off, after the audio button on why.zero.university: a sine wave
+// that travels sideways while sound is on and flattens into a straight line
+// when off (see `.sound-wave` in globals.css). Browsers keep every page load
+// silent until the first click, tap or key press, so the wave also stays flat
+// until then; that first gesture anywhere unlocks audio and starts it.
 
 // One cycle across the icon, sampled at 11 points (x 1.6–18.4 in a 20×12
 // box, amplitude 3 around y=6) and shifted 1/12 of a cycle per frame. The
@@ -20,9 +21,12 @@ function wavePoints(phase: number) {
 const frames = Array.from({ length: FRAMES + 1 }, (_, i) => wavePoints(i / FRAMES));
 
 export function SoundToggle() {
-  // The choice is remembered (lib/sound.ts) so UI sounds elsewhere, like the
-  // case-study image click, follow it. The server render assumes "on".
-  const on = useSyncExternalStore(onSoundChange, isSoundOn, () => true);
+  // The choice is remembered (lib/sound.ts) so UI sounds elsewhere follow it.
+  // The wave only moves when sound is chosen *and* audio is unlocked, so it
+  // always matches what can be heard; the server render is flat.
+  const chosen = useSyncExternalStore(onSoundChange, isSoundOn, () => true);
+  const unlocked = useSyncExternalStore(onSoundChange, isAudioUnlocked, () => false);
+  const on = chosen && unlocked;
   const svg = useRef<SVGSVGElement>(null);
 
   // Run the wave only while on (and motion is allowed); off freezes it where
@@ -40,9 +44,13 @@ export function SoundToggle() {
   return (
     <button
       type="button"
-      aria-label={on ? "Sound on" : "Sound off"}
+      aria-label={on ? "Sound on" : chosen ? "Enable sound" : "Sound off"}
       aria-pressed={on}
-      onClick={() => setSoundOn(!on)}
+      onClick={() => {
+        // The click that unlocked audio just turns the (chosen) sound on.
+        if (takeUnlockClick() && chosen) return;
+        setSoundOn(!chosen);
+      }}
       className={`${iconButtonClass} cursor-pointer`}
     >
       <svg
