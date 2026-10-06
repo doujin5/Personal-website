@@ -20,7 +20,7 @@ export function WritingsList() {
           const post = w.href.startsWith("/");
           const content = (
             <>
-              <span className={`text-sm transition-colors duration-300 ${ease} group-hover:text-link-hover`}>{w.title}</span>
+              <span className="text-sm">{w.title}</span>
               <span className="relative shrink-0 font-mono text-xs leading-normal text-fg-muted uppercase">
                 <span
                   className={`inline-block transition-[opacity,translate,filter] duration-300 ${ease} group-hover:-translate-y-0.5 group-hover:opacity-0 group-hover:blur-[2px]`}
