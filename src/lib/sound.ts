@@ -77,37 +77,38 @@ export function playTick() {
  *  pawl snapping over a tooth) over a faint low knock, each slightly detuned
  *  so a sweep sounds mechanical rather than synthetic. */
 export function tick(ac: BaseAudioContext, t: number, dest: AudioNode) {
-  const vary = 1 + (Math.random() - 0.5) * 0.12;
+  // Each tick differs a little in pitch, level and length, as real ones do.
+  const vary = 1 + (Math.random() - 0.5) * 0.16;
   const out = ac.createGain();
-  out.gain.value = 0.55;
+  out.gain.value = 0.6 * (1 + (Math.random() - 0.5) * 0.3);
   out.connect(dest);
 
-  const len = Math.floor(ac.sampleRate * 0.005);
+  const len = Math.floor(ac.sampleRate * (0.006 + Math.random() * 0.004));
   const buf = ac.createBuffer(1, len, ac.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 8;
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 6;
   const click = ac.createBufferSource();
   const band = ac.createBiquadFilter();
   const clickGain = ac.createGain();
   click.buffer = buf;
   band.type = "bandpass";
-  band.frequency.value = 4800 * vary;
-  band.Q.value = 1.4;
-  clickGain.gain.value = 0.4;
+  band.frequency.value = 2900 * vary;
+  band.Q.value = 1.8;
+  clickGain.gain.value = 0.32;
   click.connect(band).connect(clickGain).connect(out);
   click.start(t);
 
   const knock = ac.createOscillator();
   const knockGain = ac.createGain();
   knock.type = "sine";
-  knock.frequency.setValueAtTime(260 * vary, t);
-  knock.frequency.exponentialRampToValueAtTime(170 * vary, t + 0.012);
+  knock.frequency.setValueAtTime(190 * vary, t);
+  knock.frequency.exponentialRampToValueAtTime(120 * vary, t + 0.02);
   knockGain.gain.setValueAtTime(0.0001, t);
-  knockGain.gain.exponentialRampToValueAtTime(0.04, t + 0.0015);
-  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+  knockGain.gain.exponentialRampToValueAtTime(0.07, t + 0.002);
+  knockGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
   knock.connect(knockGain).connect(out);
   knock.start(t);
-  knock.stop(t + 0.03);
+  knock.stop(t + 0.04);
 }
 
 /** One beat of a Dune thumper, scaled down to a UI click: a deep sub thump,
