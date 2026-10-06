@@ -227,7 +227,7 @@ export function CaseRuler() {
                       names slide in and sharpen one after another, top to bottom;
                       on leave they all fade out quickly. */}
                   <span
-                    className="pointer-events-none absolute top-0 right-0 translate-x-1.5 text-fg-muted uppercase opacity-0 blur-[2px] transition-[opacity,translate,filter,color] duration-200 ease-out group-hover/ruler:translate-x-0 group-hover/ruler:opacity-100 group-hover/ruler:blur-none group-hover/ruler:delay-(--reveal-delay) group-hover/ruler:duration-400 group-hover/ruler:ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tick:text-fg"
+                    className="pointer-events-none absolute top-0 right-0 translate-x-1.5 text-fg-muted uppercase opacity-0 blur-[2px] transition-[opacity,translate,filter,color] duration-200 ease-out group-hover/ruler:translate-x-0 group-hover/ruler:opacity-100 group-hover/ruler:blur-none group-hover/ruler:delay-(--reveal-delay) group-hover/ruler:duration-400 group-hover/ruler:ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tick:text-link-hover"
                     style={{ "--reveal-delay": `${80 + (order.get(i) ?? 0) * 35}ms` } as React.CSSProperties}
                     data-scramble={name}
                     data-delay={80 + (order.get(i) ?? 0) * 35}
@@ -238,7 +238,7 @@ export function CaseRuler() {
                 </span>
               )}
               <span
-                className={`h-[0.5px] shrink-0 transition-[width,background-color,opacity] duration-150 group-hover/tick:w-[18px] group-hover/tick:bg-fg group-data-[current=true]/tick:opacity-0 ${
+                className={`h-[0.5px] shrink-0 transition-[width,background-color,opacity] duration-150 group-hover/tick:w-[18px] group-hover/tick:bg-link-hover group-data-[current=true]/tick:opacity-0 ${
                   name ? "w-3.5 bg-fg" : "w-[var(--w,8px)] bg-[var(--c,var(--tick))]"
                 }`}
               />

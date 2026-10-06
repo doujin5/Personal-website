@@ -2,7 +2,7 @@ import { profile } from "@/data/profile";
 import { CopyText } from "./CopyText";
 
 const linkClass =
-  "font-medium text-fg-muted underline decoration-link-decoration decoration-dotted decoration-[0.035em] [text-underline-position:from-font] transition-colors hover:text-fg";
+  "font-medium text-fg-muted underline decoration-link-decoration decoration-dotted decoration-[0.035em] [text-underline-position:from-font] transition-colors hover:text-link-hover hover:decoration-link-hover";
 
 export function Bio() {
   return (
