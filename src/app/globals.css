@@ -14,10 +14,11 @@
   --sage: #5a7a5c;
   /* Not in the Figma file: hover fill for rows and icon buttons. */
   --hover: #f3f3f3;
-  /* Hover colour for links, the ruler and other interactive text. #0090ff is
-     only 3.2:1 on the light page, so light mode uses the same hue deepened to
-     #0071c7 (4.9:1, AA for text); dark mode uses #0090ff itself (5.7:1). */
-  --link-hover: #0071c7;
+  /* The site's accent, after makingsoftware.com: a deep, vivid blue-violet
+     (wide-gamut oklch; 6.5:1 on the light page), used for every interactive
+     hover (links, email, writings titles, EXIT) and the case-study ruler.
+     Dark mode uses a lighter tint of the same hue (5.6:1 on #121212). */
+  --accent: oklch(0.5058 0.2886 264.84);
   color-scheme: light;
 }
 
@@ -36,7 +37,7 @@
     --tick: #4a4a4a;
     --sage: #8fb592;
     --hover: #1c1c1c;
-    --link-hover: #0090ff;
+    --accent: oklch(0.66 0.19 264.84);
     color-scheme: dark;
   }
 }
@@ -51,7 +52,7 @@
   --tick: #4a4a4a;
   --sage: #8fb592;
   --hover: #1c1c1c;
-  --link-hover: #0090ff;
+  --accent: oklch(0.66 0.19 264.84);
   color-scheme: dark;
 }
 
@@ -133,7 +134,8 @@
   --color-fg-muted: var(--rs-color-foreground-base-secondary);
   --color-line: var(--rs-color-border-base-primary);
   --color-link-decoration: var(--link-decoration);
-  --color-link-hover: var(--link-hover);
+  --color-link-hover: var(--accent);
+  --color-ruler-accent: var(--accent);
   --color-hover: var(--hover);
   --color-sage: var(--sage);
   --color-canvas-hover: var(--rs-color-background-base-primary-hover);

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { playTick } from "@/lib/sound";
 
 // Side ruler from the case-study frame (Figma 390:64244), behaving like the
-// makingsoftware.com side ruler: an even column of 0.5px ticks (~9px apart,
+// makingsoftware.com side ruler: an even column of 1px ticks (~9px apart,
 // as in Figma) fixed at mid-height, 16px in from the right edge, 75% of the
 // window tall (398px, the Figma size, up to 720px). The column maps the whole
 // page from 0 (top) to 1 (bottom). Each heading snaps to its nearest tick,
@@ -220,14 +220,14 @@ export function CaseRuler() {
             >
               {name && (
                 <span className="relative font-mono text-[11px] leading-3 whitespace-nowrap">
-                  <span className="text-fg-muted transition-opacity duration-300 ease-out group-hover/ruler:opacity-0 group-hover/ruler:duration-200 group-data-[current=true]/tick:opacity-0">
+                  <span className="text-fg transition-opacity duration-300 ease-out group-hover/ruler:opacity-0 group-hover/ruler:duration-200 group-data-[current=true]/tick:opacity-0">
                     {(i / last).toFixed(2)}
                   </span>
                   {/* Heading name while the ruler is hovered: after a short pause,
                       names slide in and sharpen one after another, top to bottom;
                       on leave they all fade out quickly. */}
                   <span
-                    className="pointer-events-none absolute top-0 right-0 translate-x-1.5 text-fg-muted uppercase opacity-0 blur-[2px] transition-[opacity,translate,filter,color] duration-200 ease-out group-hover/ruler:translate-x-0 group-hover/ruler:opacity-100 group-hover/ruler:blur-none group-hover/ruler:delay-(--reveal-delay) group-hover/ruler:duration-400 group-hover/ruler:ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tick:text-link-hover"
+                    className="pointer-events-none absolute top-0 right-0 translate-x-1.5 text-fg uppercase opacity-0 blur-[2px] transition-[opacity,translate,filter,color] duration-200 ease-out group-hover/ruler:translate-x-0 group-hover/ruler:opacity-100 group-hover/ruler:blur-none group-hover/ruler:delay-(--reveal-delay) group-hover/ruler:duration-400 group-hover/ruler:ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tick:text-ruler-accent"
                     style={{ "--reveal-delay": `${80 + (order.get(i) ?? 0) * 35}ms` } as React.CSSProperties}
                     data-scramble={name}
                     data-delay={80 + (order.get(i) ?? 0) * 35}
@@ -238,8 +238,8 @@ export function CaseRuler() {
                 </span>
               )}
               <span
-                className={`h-[0.5px] shrink-0 transition-[width,background-color,opacity] duration-150 group-hover/tick:w-[18px] group-hover/tick:bg-link-hover group-data-[current=true]/tick:opacity-0 ${
-                  name ? "w-3.5 bg-fg" : "w-[var(--w,8px)] bg-[var(--c,var(--tick))]"
+                className={`h-px shrink-0 transition-[width,background-color,opacity] duration-150 group-hover/tick:w-4 group-hover/tick:bg-ruler-accent group-data-[current=true]/tick:opacity-0 ${
+                  name ? "w-3 bg-fg" : "w-[var(--w,8px)] bg-[var(--c,var(--tick))]"
                 }`}
               />
             </button>
@@ -253,9 +253,9 @@ export function CaseRuler() {
         >
           <span
             ref={readout}
-            className="font-mono text-[11px] leading-3 text-fg tabular-nums transition-opacity duration-300 ease-out group-hover/ruler:opacity-0 group-hover/ruler:duration-200"
+            className="font-mono text-[11px] leading-3 text-ruler-accent tabular-nums transition-opacity duration-300 ease-out group-hover/ruler:opacity-0 group-hover/ruler:duration-200"
           />
-          <span className="h-[2px] w-[18px] bg-fg" />
+          <span className="h-px w-4 bg-ruler-accent" />
         </span>
       </div>
     </nav>
