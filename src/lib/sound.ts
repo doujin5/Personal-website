@@ -49,28 +49,39 @@ function watch(ac: AudioContext) {
   ac.addEventListener("statechange", () => window.dispatchEvent(new Event(EVENT)));
 }
 
-// The first click, tap or key press anywhere unlocks audio. If that same
-// click lands on the sound toggle, it should only unlock, not also switch
-// sound off; `unlockClick` marks that click and is cleared once it's done.
+// A click, tap or key press anywhere unlocks audio. Safari is stricter than
+// Chrome about which gesture events may start audio and wants a sound
+// actually started inside one, so every gesture event is tried, a silent
+// one-sample buffer is played in it, and the listeners stay on: they're a
+// no-op while audio runs and re-unlock it if Safari later interrupts it.
+// If the unlocking click lands on the sound toggle, it should only unlock,
+// not also switch sound off; `unlockClick` marks that click until it's done.
 let unlockClick = false;
 if (typeof window !== "undefined") {
+  const clear = () => (unlockClick = false);
   const unlock = () => {
-    removeEventListener("pointerdown", unlock, true);
-    removeEventListener("keydown", unlock, true);
+    if (ctx?.state === "running") return;
     try {
       if (!ctx) {
         ctx = new AudioContext();
         watch(ctx);
       }
       void ctx.resume();
+      const silence = ctx.createBufferSource();
+      silence.buffer = ctx.createBuffer(1, 1, 22050);
+      silence.connect(ctx.destination);
+      silence.start(0);
     } catch {}
-    unlockClick = true;
-    addEventListener("click", () => (unlockClick = false), { once: true });
-    setTimeout(() => (unlockClick = false), 1500); // no click followed (e.g. a key press)
+    if (!unlockClick) {
+      unlockClick = true;
+      addEventListener("click", clear, { once: true }); // bubble: after the toggle's handler
+      setTimeout(clear, 1500); // no click followed (e.g. a key press)
+    }
     window.dispatchEvent(new Event(EVENT));
   };
-  addEventListener("pointerdown", unlock, true);
-  addEventListener("keydown", unlock, true);
+  for (const type of ["pointerdown", "mousedown", "touchend", "click", "keydown"]) {
+    addEventListener(type, unlock, true);
+  }
 }
 
 /** True once, for the click that unlocked audio. */
