@@ -212,10 +212,10 @@ export function playHoverSound() {
   } catch {}
 }
 
-/** A fist beating into sand, Dune-style, kept short for hovering: a deep,
- *  round impact (~75 → 42 Hz), a broad heavily-damped low thud (~120 Hz)
+/** A fist beating into sand, Dune-style, for hovering list rows: a deep,
+ *  round impact (~60 → 34 Hz, ringing ~0.25 s), a broad damped low thud (~95 Hz)
  *  so it lands "into" something soft, and a brief dull crunch of displaced
- *  sand. Sand absorbs the hit, so nothing rings on. Slightly different each
+ *  sand, then a soft low rumble as the sand settles. Slightly different each
  *  time. */
 export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const vary = 1 + (Math.random() - 0.5) * 0.12;
@@ -227,14 +227,14 @@ export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   const impact = ac.createOscillator();
   const impactGain = ac.createGain();
   impact.type = "sine";
-  impact.frequency.setValueAtTime(75 * vary, t);
-  impact.frequency.exponentialRampToValueAtTime(42 * vary, t + 0.09);
+  impact.frequency.setValueAtTime(60 * vary, t);
+  impact.frequency.exponentialRampToValueAtTime(34 * vary, t + 0.14);
   impactGain.gain.setValueAtTime(0.0001, t);
-  impactGain.gain.exponentialRampToValueAtTime(0.15, t + 0.007);
-  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+  impactGain.gain.exponentialRampToValueAtTime(0.17, t + 0.008);
+  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
   impact.connect(impactGain).connect(out);
   impact.start(t);
-  impact.stop(t + 0.16);
+  impact.stop(t + 0.26);
 
   const noise = (seconds: number, grainy: boolean) => {
     const len = Math.floor(ac.sampleRate * seconds);
@@ -253,29 +253,48 @@ export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
   };
 
   // Thud: a broad, damped low-mid body, struck by a soft burst.
-  const thudSrc = noise(0.012, false);
+  const thudSrc = noise(0.018, false);
   const thud = ac.createBiquadFilter();
   thud.type = "bandpass";
-  thud.frequency.value = 120 * vary;
-  thud.Q.value = 3;
+  thud.frequency.value = 95 * vary;
+  thud.Q.value = 2.5;
   const thudGain = ac.createGain();
   thudGain.gain.value = 0.55;
   thudSrc.connect(thud).connect(thudGain).connect(out);
   thudSrc.start(t);
 
   // Crunch: a brief, dull spray of displaced sand.
-  const crunchSrc = noise(0.03, true);
+  const crunchSrc = noise(0.045, true);
   const grit = ac.createBiquadFilter();
   grit.type = "bandpass";
-  grit.frequency.value = 1000 * vary;
+  grit.frequency.value = 850 * vary;
   grit.Q.value = 0.8;
   const dull = ac.createBiquadFilter();
   dull.type = "lowpass";
-  dull.frequency.value = 2200;
+  dull.frequency.value = 1900;
   const crunchGain = ac.createGain();
   crunchGain.gain.value = 0.05;
   crunchSrc.connect(grit).connect(dull).connect(crunchGain).connect(out);
   crunchSrc.start(t + 0.003);
+
+  // Settle: a soft, low rumble of sand settling after the hit.
+  const settleLen = Math.floor(ac.sampleRate * 0.28);
+  const settleBuf = ac.createBuffer(1, settleLen, ac.sampleRate);
+  const sd = settleBuf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < settleLen; i++) {
+    last = last * 0.92 + (Math.random() * 2 - 1) * 0.08;
+    sd[i] = last * 4 * (1 - i / settleLen) ** 2;
+  }
+  const settle = ac.createBufferSource();
+  settle.buffer = settleBuf;
+  const settleLow = ac.createBiquadFilter();
+  settleLow.type = "lowpass";
+  settleLow.frequency.value = 320;
+  const settleGain = ac.createGain();
+  settleGain.gain.value = 0.09;
+  settle.connect(settleLow).connect(settleGain).connect(out);
+  settle.start(t + 0.02);
 }
 
 let lastTick = 0;
