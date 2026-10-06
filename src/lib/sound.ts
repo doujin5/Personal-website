@@ -58,6 +58,98 @@ export function playOpenSound() {
   } catch {}
 }
 
+/** Plays the image-close whoosh. */
+export function playCloseSound() {
+  if (!isSoundOn()) return;
+  try {
+    const ac = audio();
+    if (ac) whoosh(ac, ac.currentTime, ac.destination);
+  } catch {}
+}
+
+/** A soft, natural whoosh for an image settling back into the page, shaped
+ *  like air moving past: the rush rises then falls in pitch (~500 Hz → 1.1
+ *  kHz → 380 Hz) under a smooth bell-shaped swell that peaks early (~40%),
+ *  with a low "body" layer, a light airy layer, a slight right-to-left drift
+ *  and a gentle flutter. Varies a little every time. */
+export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode) {
+  const vary = 1 + (Math.random() - 0.5) * 0.12;
+  const dur = 0.42 * vary;
+  const peakAt = t + dur * 0.4;
+
+  // Brown-ish noise: smoothed white noise, so the rush is soft, not hissy.
+  const len = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    last = last * 0.86 + (Math.random() * 2 - 1) * 0.14;
+    d[i] = last * 3.2;
+  }
+
+  // Bell-shaped swell (sin² with an early peak), scaled to a quiet level.
+  const curve = new Float32Array(64);
+  for (let i = 0; i < curve.length; i++) {
+    const x = i / (curve.length - 1);
+    const s = x < 0.4 ? x / 0.4 : 1 - (x - 0.4) / 0.6;
+    curve[i] = 0.06 * vary * Math.sin((s * Math.PI) / 2) ** 2;
+  }
+  const swell = ac.createGain();
+  swell.gain.setValueAtTime(0, t);
+  swell.gain.setValueCurveAtTime(curve, t, dur);
+
+  // Gentle flutter, like turbulence in moving air.
+  const flutter = ac.createOscillator();
+  const depth = ac.createGain();
+  const flutterGain = ac.createGain();
+  flutter.frequency.value = 14 * vary;
+  depth.gain.value = 0.12;
+  flutterGain.gain.value = 1;
+  flutter.connect(depth).connect(flutterGain.gain);
+
+  // Slight right-to-left drift, where stereo panning is available.
+  const pan = ac.createStereoPanner?.();
+  if (pan) {
+    pan.pan.setValueAtTime(0.25, t);
+    pan.pan.linearRampToValueAtTime(-0.25, t + dur);
+  }
+
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+
+  // Airy layer: band-pass that rises, then falls, as the air goes by.
+  const air = ac.createBiquadFilter();
+  air.type = "bandpass";
+  air.Q.value = 0.7;
+  air.frequency.setValueAtTime(500 * vary, t);
+  air.frequency.exponentialRampToValueAtTime(1100 * vary, peakAt);
+  air.frequency.exponentialRampToValueAtTime(380 * vary, t + dur);
+  const airGain = ac.createGain();
+  airGain.gain.value = 0.7;
+
+  // Body layer: the low, soft part of the rush.
+  const body = ac.createBiquadFilter();
+  body.type = "lowpass";
+  body.frequency.value = 520;
+  const bodyGain = ac.createGain();
+  bodyGain.gain.value = 0.55;
+
+  const soften = ac.createBiquadFilter();
+  soften.type = "lowpass";
+  soften.frequency.value = 1700;
+
+  src.connect(air).connect(airGain).connect(soften);
+  src.connect(body).connect(bodyGain).connect(soften);
+  soften.connect(swell).connect(flutterGain);
+  if (pan) flutterGain.connect(pan).connect(dest);
+  else flutterGain.connect(dest);
+
+  src.start(t);
+  src.stop(t + dur);
+  flutter.start(t);
+  flutter.stop(t + dur);
+}
+
 let lastTick = 0;
 
 /** One ratchet click for passing over a ruler tick, like winding the

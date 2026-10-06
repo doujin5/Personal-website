@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { playOpenSound } from "@/lib/sound";
+import { playCloseSound, playOpenSound } from "@/lib/sound";
 
 // Image hover + lightbox after makingsoftware.com: hairline guides fade in
 // along the image's edges on hover, running past its corners; clicking opens a full-screen view over a blurred page with the
@@ -35,6 +35,7 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
   const thumb = useRef<HTMLImageElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const big = useRef<HTMLImageElement>(null);
+  const closing = useRef(false);
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState(0);
   const caption = `Fig. ${figure} — ${alt}`;
@@ -65,10 +66,15 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
   }, [open, caption.length]);
 
   // Close: shrink back into the thumbnail, then tear down.
+  // EXIT sits inside the dialog, so its click reaches the dialog's handler
+  // too; `closing` keeps that to a single close (and a single whoosh).
   function close() {
     const d = dialog.current;
-    if (!d?.open) return;
+    if (!d?.open || closing.current) return;
+    closing.current = true;
+    playCloseSound();
     const done = () => {
+      closing.current = false;
       d.close();
       document.documentElement.style.overflow = "";
       setOpen(false);
