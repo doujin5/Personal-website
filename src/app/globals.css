@@ -14,8 +14,10 @@
   --sage: #5a7a5c;
   /* Not in the Figma file: hover fill for rows and icon buttons. */
   --hover: #f3f3f3;
-  /* Hover colour for hyperlinks and the case-study ruler (both themes). */
-  --link-hover: #0090ff;
+  /* Hover colour for links, the ruler and other interactive text. #0090ff is
+     only 3.2:1 on the light page, so light mode uses the same hue deepened to
+     #0071c7 (4.9:1, AA for text); dark mode uses #0090ff itself (5.7:1). */
+  --link-hover: #0071c7;
   color-scheme: light;
 }
 
@@ -34,6 +36,7 @@
     --tick: #4a4a4a;
     --sage: #8fb592;
     --hover: #1c1c1c;
+    --link-hover: #0090ff;
     color-scheme: dark;
   }
 }
@@ -48,6 +51,7 @@
   --tick: #4a4a4a;
   --sage: #8fb592;
   --hover: #1c1c1c;
+  --link-hover: #0090ff;
   color-scheme: dark;
 }
 

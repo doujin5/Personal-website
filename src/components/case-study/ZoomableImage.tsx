@@ -150,7 +150,7 @@ export function ZoomableImage({ src, alt, width, height, figure, preload }: Prop
             type="button"
             autoFocus
             onClick={close}
-            className="fixed top-4 right-5 cursor-pointer font-mono text-xs leading-4 text-fg-muted uppercase outline-none hover:text-fg focus-visible:text-fg focus-visible:underline"
+            className="fixed top-4 right-5 cursor-pointer font-mono text-xs leading-4 text-fg-muted uppercase outline-none transition-colors hover:text-link-hover focus-visible:text-link-hover focus-visible:underline"
           >
             Exit
           </button>
