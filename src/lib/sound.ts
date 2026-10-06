@@ -98,14 +98,24 @@ export function playCloseSound() {
   } catch {}
 }
 
+/** Plays the page-wipe sound for going back: the same whoosh, stretched to
+ *  the ~0.68 s page wipe. */
+export function playWipeSound() {
+  if (!isSoundOn()) return;
+  try {
+    const ac = audio();
+    if (ac) whoosh(ac, ac.currentTime, ac.destination, 0.68);
+  } catch {}
+}
+
 /** A soft, natural whoosh for an image settling back into the page, shaped
  *  like air moving past: the rush rises then falls in pitch (~500 Hz → 1.1
  *  kHz → 380 Hz) under a smooth bell-shaped swell that peaks early (~40%),
  *  with a low "body" layer, a light airy layer, a slight right-to-left drift
  *  and a gentle flutter. Varies a little every time. */
-export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode) {
+export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode, length = 0.42) {
   const vary = 1 + (Math.random() - 0.5) * 0.12;
-  const dur = 0.42 * vary;
+  const dur = length * vary;
   const peakAt = t + dur * 0.4;
 
   // Brown-ish noise: smoothed white noise, so the rush is soft, not hissy.

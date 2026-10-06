@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLayoutEffect, type ComponentProps } from "react";
+import { playWipeSound } from "@/lib/sound";
 
 // Page wipe after opening a post on zero.university/founder-letters: the new
 // page is uncovered from the bottom up through a soft gradient edge while the
@@ -39,6 +40,8 @@ export function TransitionLink({
       onClick={(e) => {
         onClick?.(e);
         const plain = e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
+        // Going back (the back button) gets a wipe sound to match the wipe.
+        if (direction === "close" && !plain && !e.defaultPrevented) playWipeSound();
         if (
           e.defaultPrevented ||
           plain ||
