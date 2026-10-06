@@ -200,101 +200,129 @@ export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode, length 
 
 let lastHover = 0;
 
-/** Plays the soft hover "tock" for list rows. */
+/** Plays the hover sound for list rows. Its valley tail is long, so it's
+ *  limited to one every 150 ms to keep quick sweeps from piling up. */
 export function playHoverSound() {
   if (!isSoundOn()) return;
   const now = performance.now();
-  if (now - lastHover < 40) return;
+  if (now - lastHover < 150) return;
   lastHover = now;
   try {
     const ac = audio();
-    if (ac) tock(ac, ac.currentTime, ac.destination);
+    if (ac) duneCheck(ac, ac.currentTime, ac.destination);
   } catch {}
 }
 
-/** A fist beating into sand, Dune-style, for hovering list rows: a deep,
- *  round impact (~60 → 34 Hz, ringing ~0.25 s), a broad damped low thud (~95 Hz)
- *  so it lands "into" something soft, and a brief dull crunch of displaced
- *  sand, then a soft low rumble as the sand settles. Slightly different each
- *  time. */
-export function tock(ac: BaseAudioContext, t: number, dest: AudioNode) {
-  const vary = 1 + (Math.random() - 0.5) * 0.12;
-  const out = ac.createGain();
-  out.gain.value = 0.68 * (1 + (Math.random() - 0.5) * 0.25);
-  out.connect(dest);
-
-  // Impact: the weight of the fist.
-  const impact = ac.createOscillator();
-  const impactGain = ac.createGain();
-  impact.type = "sine";
-  impact.frequency.setValueAtTime(60 * vary, t);
-  impact.frequency.exponentialRampToValueAtTime(34 * vary, t + 0.14);
-  impactGain.gain.setValueAtTime(0.0001, t);
-  impactGain.gain.exponentialRampToValueAtTime(0.17, t + 0.008);
-  impactGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-  impact.connect(impactGain).connect(out);
-  impact.start(t);
-  impact.stop(t + 0.26);
-
-  const noise = (seconds: number, grainy: boolean) => {
+/** Paul's final check in Dune: a deliberate, heavy fist strike into a deep,
+ *  packed dune, heard in a valley. A soft ~20 ms onset (deep sand gives, it
+ *  doesn't snap), a toneless deep "whoom" of packed sand, a quiet very low
+ *  boom under it (kept low so it reads as weight, not a ringing door), the
+ *  hush of sand compressing under the fist, a short contact transient for a
+ *  clear front edge, and the valley: a light, bright reverb
+ *  with two faint echoes off the dune walls, trailing away over ~1.5 s. */
+export function duneCheck(ac: BaseAudioContext, t: number, dest: AudioNode) {
+  const buffer = (seconds: number, fill: (i: number, len: number) => number) => {
     const len = Math.floor(ac.sampleRate * seconds);
     const buf = ac.createBuffer(1, len, ac.sampleRate);
     const d = buf.getChannelData(0);
-    let grain = 0;
-    for (let i = 0; i < len; i++) {
-      const fade = (1 - i / len) ** 2;
-      if (grainy && Math.random() < 0.08) grain = 0.5 + Math.random() * 0.5;
-      d[i] = (Math.random() * 2 - 1) * fade * (grainy ? 0.35 + grain : 1);
-      grain *= 0.85;
-    }
+    for (let i = 0; i < len; i++) d[i] = fill(i, len);
     const src = ac.createBufferSource();
     src.buffer = buf;
     return src;
   };
+  const filter = (type: BiquadFilterType, hz: number, q = 0.7) => {
+    const f = ac.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = hz;
+    f.Q.value = q;
+    return f;
+  };
+  const level = (v: number) => {
+    const g = ac.createGain();
+    g.gain.value = v;
+    return g;
+  };
+  // Soft onset over `atk` of the length, then a power-curve decay.
+  const env = (x: number, atk: number, pow: number) => Math.min(1, x / atk) * (1 - x) ** pow;
 
-  // Thud: a broad, damped low-mid body, struck by a soft burst.
-  const thudSrc = noise(0.018, false);
-  const thud = ac.createBiquadFilter();
-  thud.type = "bandpass";
-  thud.frequency.value = 95 * vary;
-  thud.Q.value = 2.5;
-  const thudGain = ac.createGain();
-  thudGain.gain.value = 0.55;
-  thudSrc.connect(thud).connect(thudGain).connect(out);
-  thudSrc.start(t);
+  const out = level(0.06);
+  out.connect(dest);
+  const verb = ac.createConvolver();
+  verb.normalize = true;
+  verb.buffer = valley(ac);
+  verb.connect(filter("lowpass", 2400)).connect(level(0.32)).connect(out);
+  const dry = level(1);
+  dry.connect(out);
+  dry.connect(verb);
 
-  // Crunch: a brief, dull spray of displaced sand.
-  const crunchSrc = noise(0.045, true);
-  const grit = ac.createBiquadFilter();
-  grit.type = "bandpass";
-  grit.frequency.value = 850 * vary;
-  grit.Q.value = 0.8;
-  const dull = ac.createBiquadFilter();
-  dull.type = "lowpass";
-  dull.frequency.value = 1900;
-  const crunchGain = ac.createGain();
-  crunchGain.gain.value = 0.05;
-  crunchSrc.connect(grit).connect(dull).connect(crunchGain).connect(out);
-  crunchSrc.start(t + 0.003);
-
-  // Settle: a soft, low rumble of sand settling after the hit.
-  const settleLen = Math.floor(ac.sampleRate * 0.28);
-  const settleBuf = ac.createBuffer(1, settleLen, ac.sampleRate);
-  const sd = settleBuf.getChannelData(0);
+  // Whoom: toneless deep packed sand.
   let last = 0;
-  for (let i = 0; i < settleLen; i++) {
-    last = last * 0.92 + (Math.random() * 2 - 1) * 0.08;
-    sd[i] = last * 4 * (1 - i / settleLen) ** 2;
+  const whoom = buffer(0.42, (i, len) => {
+    last = last * 0.96 + (Math.random() * 2 - 1) * 0.04;
+    return last * 14 * env(i / len, 0.05, 2.2);
+  });
+  whoom.connect(filter("lowpass", 400)).connect(level(0.55)).connect(dry);
+  whoom.start(t);
+
+  // Boom: a quiet, very deep body under it.
+  const boom = ac.createOscillator();
+  const boomGain = ac.createGain();
+  boom.type = "sine";
+  boom.frequency.setValueAtTime(52, t);
+  boom.frequency.exponentialRampToValueAtTime(36, t + 0.3);
+  boomGain.gain.setValueAtTime(0.0001, t);
+  boomGain.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
+  boomGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+  boom.connect(boomGain).connect(dry);
+  boom.start(t);
+  boom.stop(t + 0.47);
+
+  // Hush: sand compressing under the fist (pink noise, Paul Kellet's filter).
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  const hush = buffer(0.3, (i, len) => {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179;
+    b1 = 0.99332 * b1 + w * 0.0750759;
+    b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856;
+    b4 = 0.55 * b4 + w * 0.5329522;
+    b5 = -0.7616 * b5 - w * 0.016898;
+    const pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.2;
+    b6 = w * 0.115926;
+    return pink * env(i / len, 0.08, 2);
+  });
+  hush.connect(filter("bandpass", 900, 0.45)).connect(filter("lowpass", 4000)).connect(level(0.42)).connect(dry);
+  hush.start(t + 0.004);
+
+  // Contact: the fist meeting the sand, a short quiet transient that gives
+  // the strike a clear front edge.
+  const contact = buffer(0.012, (i, len) => (Math.random() * 2 - 1) * (1 - i / len) ** 3);
+  contact.connect(filter("bandpass", 1800, 0.8)).connect(level(0.22)).connect(dry);
+  contact.start(t);
+}
+
+// The valley's reverb: decaying noise with two early echoes off the dune
+// walls (~0.12 s and ~0.27 s). Built once per audio context and reused.
+const valleys = new WeakMap<BaseAudioContext, AudioBuffer>();
+function valley(ac: BaseAudioContext) {
+  let ir = valleys.get(ac);
+  if (ir) return ir;
+  const sr = ac.sampleRate;
+  const len = Math.floor(sr * 1.6);
+  ir = ac.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-i / len) * 5.5) * 0.5;
+    for (const [sec, amp] of [
+      [0.12, 0.35],
+      [0.27, 0.2],
+    ]) {
+      const at = Math.floor(sr * (sec + (ch ? 0.011 : 0)));
+      for (let k = 0; k < 400; k++) d[at + k] += (Math.random() * 2 - 1) * amp * (1 - k / 400);
+    }
   }
-  const settle = ac.createBufferSource();
-  settle.buffer = settleBuf;
-  const settleLow = ac.createBiquadFilter();
-  settleLow.type = "lowpass";
-  settleLow.frequency.value = 320;
-  const settleGain = ac.createGain();
-  settleGain.gain.value = 0.09;
-  settle.connect(settleLow).connect(settleGain).connect(out);
-  settle.start(t + 0.02);
+  valleys.set(ac, ir);
+  return ir;
 }
 
 let lastTick = 0;
