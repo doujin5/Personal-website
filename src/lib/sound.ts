@@ -31,13 +31,23 @@ let ctx: AudioContext | null = null;
  *  allow audio after a click, tap or key press (hovering and scrolling don't
  *  count), and every page load starts locked again. */
 function audio() {
+  if (ctx?.state === "closed") ctx = null;
   if (!ctx) {
     if (!navigator.userActivation?.hasBeenActive) return null;
     ctx = new AudioContext();
     watch(ctx);
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  resume(ctx);
   return ctx;
+}
+
+/** Asks a paused context to run again. Safari pauses audio when the tab or
+ *  app loses focus, the Mac sleeps or the output device changes, and reports
+ *  that as "interrupted" (not just "suspended"), so anything but running is
+ *  retried. Outside a gesture Safari may refuse; the next click unlocks it. */
+function resume(ac: AudioContext) {
+  if (ac.state === "running" || ac.state === "closed") return;
+  ac.resume().catch(() => {});
 }
 
 /** Whether sound can actually be heard yet (audio unlocked by a gesture). */
@@ -54,6 +64,9 @@ function watch(ac: AudioContext) {
 // actually started inside one, so every gesture event is tried, a silent
 // one-sample buffer is played in it, and the listeners stay on: they're a
 // no-op while audio runs and re-unlock it if Safari later interrupts it.
+// If Safari has broken the context outright (closed, or it refuses to resume
+// even inside a gesture, as can happen after the output device changes), a
+// fresh one is made on the next gesture.
 // If the unlocking click lands on the sound toggle, it should only unlock,
 // not also switch sound off; `unlockClick` marks that click until it's done.
 let unlockClick = false;
@@ -62,11 +75,15 @@ if (typeof window !== "undefined") {
   const unlock = () => {
     if (ctx?.state === "running") return;
     try {
+      if (ctx?.state === "closed") ctx = null;
       if (!ctx) {
         ctx = new AudioContext();
         watch(ctx);
       }
-      void ctx.resume();
+      const ac = ctx;
+      ac.resume().catch(() => {
+        if (ctx === ac) ctx = null;
+      });
       const silence = ctx.createBufferSource();
       silence.buffer = ctx.createBuffer(1, 1, 22050);
       silence.connect(ctx.destination);
@@ -82,6 +99,10 @@ if (typeof window !== "undefined") {
   for (const type of ["pointerdown", "mousedown", "touchend", "click", "keydown"]) {
     addEventListener(type, unlock, true);
   }
+  // Coming back to the tab: try to pick up where audio left off.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && ctx) resume(ctx);
+  });
 }
 
 /** True once, for the click that unlocked audio. */
@@ -211,13 +232,18 @@ export function playHoverSound(row = 0) {
   lastHover = now;
   try {
     const ac = audio();
-    if (ac) rowTick(ac, ac.currentTime, ac.destination, 1 + 0.03 * row);
+    // Scheduled a hair ahead: Safari's audio clock moves in coarse steps and
+    // applies new sounds late, so a ~20 ms tick timed for "now" can be over
+    // before Safari starts it, and comes out silent.
+    if (ac) rowTick(ac, ac.currentTime + 0.015, ac.destination, 1 + 0.03 * row);
   } catch {}
 }
 
 /** A bright, glassy tick: ~12 ms of high-passed noise (the crisp edge) over a
  *  quick triangle "tink" falling 1.7 → 1.1 kHz, both scaled by `pitch` and
- *  detuned ±3% each time so repeats don't sound stamped out. */
+ *  detuned ±3% each time so repeats don't sound stamped out. The noise's fade
+ *  is written into its buffer rather than automated, so it survives late
+ *  scheduling too. */
 export function rowTick(ac: BaseAudioContext, t: number, dest: AudioNode, pitch = 1) {
   const p = pitch * (1 + (Math.random() - 0.5) * 0.06);
   const out = ac.createGain();
@@ -227,15 +253,14 @@ export function rowTick(ac: BaseAudioContext, t: number, dest: AudioNode, pitch 
   const len = Math.floor(ac.sampleRate * 0.012);
   const buf = ac.createBuffer(1, len, ac.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp((-9.2 * i) / len); // −80 dB by the end
   const click = ac.createBufferSource();
   const high = ac.createBiquadFilter();
   const clickGain = ac.createGain();
   click.buffer = buf;
   high.type = "highpass";
   high.frequency.value = 3500;
-  clickGain.gain.setValueAtTime(0.4, t);
-  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+  clickGain.gain.value = 0.4;
   click.connect(high).connect(clickGain).connect(out);
   click.start(t);
 
