@@ -3,7 +3,7 @@
 import { useRef, type ComponentProps } from "react";
 import { playHoverSound } from "@/lib/sound";
 
-// A <ul> that plays the soft hover sound (lib/sound.ts) once each time the
+// A <ul> that plays the hover tick (lib/sound.ts) once each time the
 // mouse moves onto a new row. Delegated, so the rows themselves can stay
 // server-rendered. Touch is ignored: there's no hover on phones.
 export function HoverSoundList(props: ComponentProps<"ul">) {
