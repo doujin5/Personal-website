@@ -69,7 +69,9 @@ export function CaseRuler() {
       setHeadings(
         [...document.querySelectorAll<HTMLElement>("article :is(h1, h2, h3)")].map((h) => ({
           label: h.textContent ?? "",
-          pct: (h.getBoundingClientRect().top + scrollY) / doc,
+          // The title opens the page, so it takes the first tick (0.00) even
+          // though the page's top padding puts it a little way down.
+          pct: h.tagName === "H1" ? 0 : (h.getBoundingClientRect().top + scrollY) / doc,
         })),
       );
     }
