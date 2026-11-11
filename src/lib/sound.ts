@@ -200,18 +200,55 @@ export function whoosh(ac: BaseAudioContext, t: number, dest: AudioNode, length 
 
 let lastHover = 0;
 
-/** Plays the hover sound for list rows: the ruler's ratchet tick, so moving
- *  down the writings list clicks like turning a dial. Throttled like
- *  `playTick` so a fast sweep stays a rattle, not a buzz. */
-export function playHoverSound() {
+/** Plays the hover sound for list rows: a bright glassy tick that climbs a
+ *  little in pitch with each row further down (`row` counts from 0), so
+ *  moving down the list sounds like walking up a scale. Throttled so a fast
+ *  sweep stays a rattle, not a buzz. */
+export function playHoverSound(row = 0) {
   if (!isSoundOn()) return;
   const now = performance.now();
   if (now - lastHover < 28) return;
   lastHover = now;
   try {
     const ac = audio();
-    if (ac) tick(ac, ac.currentTime, ac.destination);
+    if (ac) rowTick(ac, ac.currentTime, ac.destination, 1 + 0.03 * row);
   } catch {}
+}
+
+/** A bright, glassy tick: ~12 ms of high-passed noise (the crisp edge) over a
+ *  quick triangle "tink" falling 1.7 → 1.1 kHz, both scaled by `pitch` and
+ *  detuned ±3% each time so repeats don't sound stamped out. */
+export function rowTick(ac: BaseAudioContext, t: number, dest: AudioNode, pitch = 1) {
+  const p = pitch * (1 + (Math.random() - 0.5) * 0.06);
+  const out = ac.createGain();
+  out.gain.value = 0.25;
+  out.connect(dest);
+
+  const len = Math.floor(ac.sampleRate * 0.012);
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const click = ac.createBufferSource();
+  const high = ac.createBiquadFilter();
+  const clickGain = ac.createGain();
+  click.buffer = buf;
+  high.type = "highpass";
+  high.frequency.value = 3500;
+  clickGain.gain.setValueAtTime(0.4, t);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+  click.connect(high).connect(clickGain).connect(out);
+  click.start(t);
+
+  const tink = ac.createOscillator();
+  const tinkGain = ac.createGain();
+  tink.type = "triangle";
+  tink.frequency.setValueAtTime(1700 * p, t);
+  tink.frequency.exponentialRampToValueAtTime(1100 * p, t + 0.02);
+  tinkGain.gain.setValueAtTime(0.22, t);
+  tinkGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.02);
+  tink.connect(tinkGain).connect(out);
+  tink.start(t);
+  tink.stop(t + 0.02);
 }
 
 let lastTick = 0;
