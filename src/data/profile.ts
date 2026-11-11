@@ -1,4 +1,11 @@
-export type InlineLink = { label: string; href: string };
+import type { ProfileCardId } from "./profile-cards";
+
+export type InlineLink = {
+  label: string;
+  href: string;
+  /** Shows this profile's hover card (ProfileCardLink.tsx) on the link. */
+  profileCard?: ProfileCardId;
+};
 /** Copies `label` to the clipboard on click instead of navigating. */
 export type InlineCopy = { label: string; copy: true };
 export type Inline = string | InlineLink | InlineCopy;
@@ -24,11 +31,11 @@ export const profile = {
     ],
     [
       "You can reach me at ",
-      { label: "@abhishekmonty24", href: "https://x.com/abhishekmonty24" },
+      { label: "@abhishekmonty24", href: "https://x.com/abhishekmonty24", profileCard: "x" },
       " , ",
       { label: "abhishek.mohanty712@gmail.com", copy: true },
       ", or on ",
-      { label: "LinkedIn", href: "https://www.linkedin.com/in/abhishek-mohanty-8938a5144/" },
+      { label: "LinkedIn", href: "https://www.linkedin.com/in/abhishek-mohanty-8938a5144/", profileCard: "linkedin" },
     ],
   ] satisfies Inline[][],
 };

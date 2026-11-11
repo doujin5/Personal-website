@@ -1,5 +1,7 @@
 import { profile } from "@/data/profile";
 import { CopyText } from "./CopyText";
+import { profileCards } from "@/data/profile-cards";
+import { ProfileCardLink } from "./ProfileCardLink";
 
 const linkClass =
   "font-medium text-fg-muted underline decoration-link-decoration decoration-dotted decoration-[0.035em] [text-underline-position:from-font] transition-colors hover:text-link-hover hover:decoration-link-hover";
@@ -20,6 +22,14 @@ export function Bio() {
               part
             ) : "copy" in part ? (
               <CopyText key={j} text={part.label} className={linkClass} />
+            ) : "profileCard" in part && part.profileCard ? (
+              <ProfileCardLink
+                key={j}
+                label={part.label}
+                href={part.href}
+                card={profileCards[part.profileCard]}
+                className={linkClass}
+              />
             ) : (
               <a
                 key={j}

@@ -7,26 +7,49 @@ import type { Writing } from "@/data/writings";
 // Hover preview for the writings list, after zero.university's founder
 // letters: a card beside the list that springs open from its left edge on the
 // first row hovered, then glides up and down to stay level with each row.
-// Only on wide screens with a mouse (see `.writings-card` in globals.css);
+// Leaving the list wipes it away like the page wipe into a case study
+// (`.wipe-out` in globals.css). Only on wide screens with a mouse (see `.writings-card` in globals.css);
 // keyboard focus shows it too. The list rows themselves stay server-rendered.
 
 type Preview = Pick<Writing, "description" | "image"> & { label: string };
 
+/** Matches the wipe in `.wipe-out` (globals.css). */
+const CLOSE_MS = 600;
+
 export function WritingsPreview({ previews, children }: { previews: Preview[]; children: ReactNode }) {
   const wrap = useRef<HTMLDivElement>(null);
   // The last row shown stays in the card while it closes, so it doesn't empty
-  // out mid-animation. `slide` is off when opening, so the card appears at the
-  // row instead of travelling from wherever it last closed.
-  const [card, setCard] = useState({ row: 0, top: 0, open: false, slide: false });
+  // out mid-animation. "closing" holds the card open while it wipes out; only
+  // then is it "closed" and folded, ready to spring open again. `slide` is off
+  // when opening from closed, so the card appears at the row instead of
+  // travelling from wherever it last closed.
+  type Phase = "open" | "closing" | "closed";
+  const [card, setCard] = useState<{ row: number; top: number; phase: Phase; slide: boolean }>({
+    row: 0,
+    top: 0,
+    phase: "closed",
+    slide: false,
+  });
+  const closing = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const show = (target: EventTarget) => {
     const li = (target as Element).closest("li");
     if (!li || !wrap.current?.contains(li)) return;
     const row = Array.prototype.indexOf.call(li.parentElement!.children, li);
     const top = li.offsetTop + li.offsetHeight / 2;
-    setCard((c) => (c.open && c.row === row ? c : { row, top, open: true, slide: c.open }));
+    clearTimeout(closing.current);
+    setCard((c) =>
+      c.phase === "open" && c.row === row ? c : { row, top, phase: "open", slide: c.phase !== "closed" },
+    );
   };
-  const hide = () => setCard((c) => (c.open ? { ...c, open: false } : c));
+  const hide = () => {
+    setCard((c) => (c.phase === "open" ? { ...c, phase: "closing" } : c));
+    clearTimeout(closing.current);
+    closing.current = setTimeout(
+      () => setCard((c) => (c.phase === "closing" ? { ...c, phase: "closed" } : c)),
+      CLOSE_MS,
+    );
+  };
 
   const p = previews[card.row];
   return (
@@ -41,7 +64,8 @@ export function WritingsPreview({ previews, children }: { previews: Preview[]; c
       {children}
       <div
         aria-hidden="true"
-        className={`writings-card${card.open ? " is-on" : ""}${card.slide ? "" : " no-slide"}`}
+        data-state={card.phase}
+        className={`writings-card wipe-out${card.slide ? "" : " no-slide"}`}
         style={{ top: card.top }}
       >
         <div className="writings-card-in rounded-[14px] border-[0.5px] border-line bg-canvas p-1.5 pb-3 shadow-lifted">

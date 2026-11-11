@@ -284,8 +284,9 @@ body {
 /* Writings list hover (WritingsList.tsx, WritingsPreview.tsx), after
    zero.university's founder letters: the other rows fade back, and a preview
    card beside the list springs open from its left edge, then glides to stay
-   level with each row. The card needs room beside the 632px column, so it's
-   only on screens 1280px and wider, and only with a mouse. */
+   level with each row; it closes with the wipe below. The card needs room
+   beside the 632px column, so it's only on screens 1280px and wider, and only
+   with a mouse. Its 24px padding keeps the shadow inside the wipe's mask. */
 @media (hover: hover) {
   .writings:has(ul:hover) .writings-row:not(:hover),
   .writings:has(.writings-row:focus-visible) .writings-row:not(:focus-visible) {
@@ -299,11 +300,14 @@ body {
   .writings-card {
     display: block;
     position: absolute;
-    left: calc(100% + 40px);
-    width: 272px;
+    left: calc(100% + 16px);
+    width: 320px;
+    padding: 24px;
     pointer-events: none;
     transform: translateY(-50%);
-    transition: top 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition:
+      top 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      mask-position 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
   .writings-card.no-slide {
     transition: none;
@@ -313,13 +317,56 @@ body {
     transform-origin: 0 50%;
     transition: transform 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  .writings-card.is-on .writings-card-in {
+  .writings-card:not([data-state="closed"]) .writings-card-in {
     transform: none;
   }
+  .writings-card[data-state="closed"] .writings-card-in {
+    transition: none;
+  }
+}
+
+/* Profile hover cards (ProfileCardLink.tsx): open with the writings card's
+   spring (scale 0.4 × 0 → full, here from the corner above the link) and
+   close with the wipe below, dissolving down into the link. The padding
+   around the card keeps its shadow inside the wipe's mask. */
+.profile-card {
+  transform-origin: 24px 100%;
+}
+.profile-card[data-state="open"] {
+  transition:
+    scale 340ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    mask-position 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.profile-card[data-state="closed"] {
+  scale: 0.4 0;
+}
+
+/* Hover-card close (writings and profile cards), after the page wipe into a
+   case study (`vt-wipe` below): a soft gradient edge sweeps down the card so
+   it dissolves away, then the card resets out of sight, ready to spring open
+   again. The mask is four card-heights tall (hidden, a two-card soft ramp,
+   shown), a gentler edge than the page wipe's, at an even ease. The 600ms
+   matches CLOSE_MS in the components. */
+.wipe-out {
+  mask-image: linear-gradient(to bottom, transparent 25%, #000 75%);
+  mask-size: 100% 400%;
+  mask-repeat: no-repeat;
+  mask-position: 0 100%;
+}
+.wipe-out[data-state="closing"] {
+  pointer-events: none;
+  mask-position: 0 0%;
+  transition: mask-position 600ms cubic-bezier(0.45, 0, 0.25, 1);
+}
+.wipe-out[data-state="closed"] {
+  visibility: hidden;
+  pointer-events: none;
+  transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .writings-card,
-  .writings-card-in {
+  .writings-card-in,
+  .wipe-out[data-state] {
     transition: none;
   }
 }
