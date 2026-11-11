@@ -23,6 +23,12 @@ const TICK_GAP = 398 / 44; // ~9.05px, as in Figma
 
 type Heading = { label: string; pct: number };
 
+/** The number shown for a tick: the scale reads 0.00 at the top and 0.99 at
+ *  the bottom (spread evenly), so it never shows a full 1.00. */
+function tickLabel(i: number, last: number) {
+  return ((i / last) * 0.99).toFixed(2);
+}
+
 /** Ruler height for the current window, snapped to whole tick gaps. */
 function rulerHeight() {
   const h = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, innerHeight * 0.75));
@@ -124,7 +130,7 @@ export function CaseRuler() {
       lastStep = now;
       mark!.style.transitionDuration = slow ? "" : "0ms";
       mark!.style.transform = `translateY(${i * TICK_GAP}px)`;
-      if (readout.current) readout.current.textContent = (i / last).toFixed(2);
+      if (readout.current) readout.current.textContent = tickLabel(i, last);
       // Repaint the old neighbourhood (to reset it) and the new one.
       const touched = new Set<number>();
       for (const c of prev < 0 ? [i] : [prev, i])
@@ -213,7 +219,7 @@ export function CaseRuler() {
               type="button"
               data-tick={i}
               data-heading={name ? "" : undefined}
-              aria-label={name ?? `Jump to ${(i / last).toFixed(2)}`}
+              aria-label={name ?? `Jump to ${tickLabel(i, last)}`}
               onClick={() => jump(i / last)}
               onPointerEnter={playTick}
               // A tall, wide hit area per tick, like makingsoftware.com.
@@ -223,7 +229,7 @@ export function CaseRuler() {
               {name && (
                 <span className="relative font-mono text-[11px] leading-3 whitespace-nowrap">
                   <span className="text-fg transition-opacity duration-300 ease-out group-hover/ruler:opacity-0 group-hover/ruler:duration-200 group-data-[current=true]/tick:opacity-0">
-                    {(i / last).toFixed(2)}
+                    {tickLabel(i, last)}
                   </span>
                   {/* Heading name while the ruler is hovered: after a short pause,
                       names slide in and sharpen one after another, top to bottom;
